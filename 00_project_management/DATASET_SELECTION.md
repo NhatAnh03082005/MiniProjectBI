@@ -1,71 +1,90 @@
-# Dataset Selection - Supermarket Sales
+# Dataset Selection v2 — Amazon Delivery Dataset
 
-## Dataset Information
+## 1. Thông tin dataset
 
 | Thuộc tính | Giá trị |
 |---|---|
-| Tên dataset | Supermarket Sales |
-| Tác giả | Fares Ashraf |
-| Nguồn | Kaggle |
-| Link | <https://www.kaggle.com/datasets/faresashraf1001/supermarket-sales> |
-| Chủ đề | Phân tích hoạt động bán hàng của chuỗi siêu thị |
-| Số file lưu trong raw | 2 file: 1 CSV chính và 1 ZIP lưu trữ |
-| File chính | `01_data/raw/supermarket_sales.csv` |
-| File ZIP | `01_data/raw/archive/supermarket_sales_faresashraf_v2.zip` |
-| Quy mô | 1.000 dòng dữ liệu, không tính header; 17 cột |
-| Khoảng thời gian | 2019-01-01 đến 2019-03-30 |
-| SHA-256 CSV | `C5E0490DA62001D3066A56B3AA9C891C8D3ED42B6C2D09C8CA18B2A409AC93CD` |
+| Tên dataset | Amazon Delivery Dataset |
+| Người đăng Kaggle | Sujal Suthar |
+| Nguồn | <https://www.kaggle.com/datasets/sujalsuthar/amazon-delivery-dataset> |
+| License | MIT, đã xác minh trong `DATA_PROFILE_AMAZON_DELIVERY.md` |
+| Chủ đề | Hiệu suất giao hàng chặng cuối |
+| Bối cảnh BI | Hệ thống BI phân tích hiệu suất giao hàng chặng cuối dựa trên Amazon Delivery Dataset từ Kaggle. |
+| CSV | `01_data/raw/amazon_delivery.csv` |
+| ZIP | `01_data/raw/archive/amazon_delivery_original.zip` |
+| Số file raw | 2: một CSV và một ZIP archive |
+| Quy mô | 43.739 dòng, không tính header; 16 cột |
+| Khoảng ngày | 2022-02-11 đến 2022-04-06 |
+| Độ phủ | 44 ngày có dữ liệu trong 3 tháng |
+| SHA-256 CSV | `B922DFBDFED11AC2C9508C9E915326364FC95A2D00440B4C3E01E56BFFB6A4ED` |
+| SHA-256 ZIP | `0ADD736B4AFD2A616856003CBC736F05AFD02242AC4E3F416F5C07FC53EB25A8` |
 
-## Grain ở mức dữ liệu nguồn
+> Dataset được sử dụng theo tên do người đăng Kaggle cung cấp. Project không khẳng định đây là dữ liệu vận hành chính thức của Amazon.
 
-Mỗi dòng đại diện cho một bản ghi giao dịch bán hàng duy nhất trong dữ liệu nguồn, được nhận diện bởi `Invoice ID`, phát sinh tại một chi nhánh, vào một thời điểm và gắn với một `Product line`. Dataset không có SKU hoặc chi tiết dòng hóa đơn nên không đủ cơ sở xác định cấu trúc hóa đơn vật lý bên dưới.
+### 16 cột nguồn
 
-## Lý do lựa chọn
+`Order_ID`, `Agent_Age`, `Agent_Rating`, `Store_Latitude`, `Store_Longitude`, `Drop_Latitude`, `Drop_Longitude`, `Order_Date`, `Order_Time`, `Pickup_Time`, `Weather`, `Traffic`, `Vehicle`, `Area`, `Delivery_Time`, `Category`.
 
-- Chủ đề bán hàng có ý nghĩa thực tiễn và phù hợp với Business Intelligence.
-- Dữ liệu có thời gian, chi nhánh, thành phố, phân khúc khách hàng, ngành hàng và phương thức thanh toán để phân tích đa chiều.
-- Các trường số hỗ trợ measures và KPI bán hàng; các công thức tiền đã được kiểm chứng trên toàn bộ 1.000 dòng.
-- `Invoice ID` duy nhất trong snapshot, thuận lợi cho kiểm tra idempotency.
-- Ba tháng dữ liệu cho phép mô phỏng một Full Load và hai Incremental Load theo tháng.
-- Quy mô đủ nhỏ để hoàn thành trong phạm vi mini project nhưng vẫn hỗ trợ mô hình Star Schema và hai trang dashboard.
+## 2. Grain nghiệp vụ
 
-## Các chiều phân tích
+> Một dòng đại diện cho một bản ghi giao hàng nguồn duy nhất, được nhận diện bởi `Order_ID`.
 
-- Ngày và tháng.
-- Chi nhánh và thành phố trong cùng chiều Branch/Location.
-- Customer type và Gender trong chiều Customer Segment.
-- Product line.
-- Payment method.
-- Giờ hoặc khung giờ từ thuộc tính trong Fact, không tạo `dim_time`.
+Trong snapshot, 43.739/43.739 dòng có `Order_ID` hợp lệ và duy nhất. Dataset không có delivery status, attempt ID hoặc event history nên không gọi chắc chắn mỗi dòng là completed delivery. Grain Data Warehouse vẫn thuộc MOD-01.
 
-## KPI baseline
+## 3. Chấm điểm lựa chọn
 
-KPI chính: Total Sales, Total Quantity, Invoice Count, Average Order Value, Weighted Average Unit Price, Total COGS, Average Rating, Average Daily Sales và Monthly Sales Growth có chú thích.
+| Tiêu chí | Điểm tối đa | Điểm | Giải thích |
+|---|---:|---:|---|
+| Có cột ngày/thời gian | 2 | 2,0 | Có Order Date, Order Time, Pickup Time; đã có rule missing và rollover. |
+| Có measures/KPI | 2 | 2,0 | Delivery Time, Rating, pickup delay và valid distance. |
+| Có nhiều chiều phân tích | 2 | 2,0 | Weather, Traffic, Vehicle, Area, Category và date/time. |
+| Có business key | 1 | 1,0 | `Order_ID` hợp lệ và duy nhất 43.739/43.739. |
+| Dữ liệu đủ lớn | 1 | 1,0 | 43.739 dòng. |
+| Nghiệp vụ đủ rõ | 1 | 0,5 | Last-mile delivery rõ; provenance và đơn vị vẫn cần cảnh báo. |
+| Dễ mô phỏng Incremental Load | 1 | 1,0 | Có ba tháng và Date/Time; load design chưa triển khai. |
+| **Tổng** | **10** | **9,5** | Phù hợp Business Intelligence trong phạm vi project. |
 
-KPI phụ: Total Gross Income và Average Gross Income per Invoice. Gross Income bằng Tax 5% trong dataset này nên không trình bày hai chỉ số như KPI độc lập. `gross margin percentage` cố định và không dùng làm KPI biến động.
+## 4. Khả năng phân tích
 
-Weighted Average Unit Price dùng `SUM(cogs) / SUM(Quantity)`; giá trị toàn dataset khoảng `55.823481`.
+- Date, month, weekday, order hour và time period.
+- Weather, Traffic, Vehicle, Area và Category.
+- Age group, valid rating group và pickup delay band.
+- Haversine Distance trên các dòng đạt quality rule.
 
-## Phương án Incremental Load
+Không tạo `dim_agent` chỉ từ Age và Rating. Fact/Dimension vật lý chưa được chốt.
+
+## 5. KPI baseline
+
+Business Baseline có đúng 10 KPI chính: Total Deliveries; Average, Median, P90 và P95 Delivery Time; Average Pickup Delay; Average Valid Delivery Distance; Average Valid Agent Rating; Average Deliveries per Active Day; Share Above Baseline P90.
+
+Delivery Time dùng phút theo project assumption nhưng metadata Kaggle truy xuất được chưa xác nhận đơn vị. Share Above Baseline P90 dùng ngưỡng cố định 195 phút, là ngưỡng thống kê nội bộ chứ không phải SLA. Không tạo On-time Delivery Rate.
+
+## 6. Phương án load đề xuất
 
 | Batch | Khoảng dữ liệu | Số dòng |
 |---|---|---:|
-| Full Load | 01/2019 | 352 |
-| Incremental 1 | 02/2019 | 303 |
-| Incremental 2 | 03/2019, đến ngày 30 | 345 |
+| Full Load | 2022-02-11 đến 2022-02-18 | 6.982 |
+| Incremental 1 | 2022-03-01 đến 2022-03-31 | 30.658 |
+| Incremental 2 | 2022-04-01 đến 2022-04-06 | 6.099 |
+| **Tổng** | 2022-02-11 đến 2022-04-06 | **43.739** |
 
-Watermark dự kiến dựa trên Date kết hợp Time. `Invoice ID` được dùng để kiểm tra idempotency và tránh nạp trùng. Chưa tạo file batch hoặc pipeline.
+Đây chỉ là phương án đề xuất. Chưa tạo batch, pipeline, watermark hoặc rerun design chính thức.
 
-## Hạn chế dữ liệu
+## 7. Hạn chế
 
-- Chỉ có ba tháng dữ liệu, không đủ cơ sở phân tích mùa vụ hoặc xu hướng dài hạn.
-- Không có SKU, tên sản phẩm chi tiết hoặc chi tiết dòng hóa đơn.
-- Không có Customer ID; không hỗ trợ Customer Lifetime Value hoặc hành vi mua lặp lại.
-- Không có tồn kho, discount, return hoặc chi phí vận hành.
-- Branch và City ánh xạ một-một nhưng có hạn chế ngữ nghĩa từ nguồn.
-- Không thể xác minh cấu trúc hóa đơn vật lý bên dưới.
-- Có 9 giao dịch giá trị cao bị IQR gắn cờ nhưng chưa có bằng chứng là lỗi; các dòng này được giữ lại.
+- Tên dataset không chứng minh provenance vận hành chính thức.
+- Chỉ có 44 Active Day; không đủ kết luận mùa vụ hoặc xu hướng dài hạn.
+- Đơn vị Delivery Time dựa trên project assumption.
+- Không có delivery status, attempt ID, Agent ID hoặc SLA.
+- Missing, rating 6,0, tuổi dưới 18, categorical whitespace và coordinate anomalies cần quality flags/rules đã khóa.
+- Drop coordinate có rủi ro privacy.
+- Grocery có phân bố Delivery Time khác biệt nhưng chưa đủ bằng chứng để kết luận nguyên nhân.
 
-## Kết luận
+## 8. Trạng thái
 
-Supermarket Sales phù hợp với mini project BI vì hỗ trợ một quy trình nghiệp vụ bán hàng, một Fact, năm Dimension baseline, các KPI bán hàng, phân tích theo thời gian và mô phỏng incremental load. Các giới hạn của dữ liệu đã được ghi nhận để tránh suy diễn vượt quá phạm vi nguồn.
+- Dataset Selection v2: **Done**.
+- Data Profiling v2: **Done**.
+- Business Baseline v2: **Approved**.
+- Dimensional Modeling: **Todo**.
+
+Chưa chốt grain Data Warehouse, tên vật lý Fact/Dimension, Star Schema hoặc Source-to-Target Mapping.

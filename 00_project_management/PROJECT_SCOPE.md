@@ -2,41 +2,32 @@
 
 ## In scope
 
-- Một dataset Kaggle: Supermarket Sales.
-- Một quy trình nghiệp vụ bán hàng.
-- Một Fact dự kiến: `fact_sales`.
-- Năm Dimension dự kiến: `dim_date`, `dim_branch_location`, `dim_customer_segment`, `dim_product_line`, `dim_payment_method`.
-- Chín KPI chính baseline: Total Sales, Total Quantity, Invoice Count, Average Order Value, Weighted Average Unit Price, Total COGS, Average Rating, Average Daily Sales và Monthly Sales Growth có chú thích.
-- Ba nhóm người dùng đã xác nhận: Sales/Operations Manager, Branch Manager và BI Analyst.
-- Đúng tám Business Questions từ BQ-01 đến BQ-08 theo `BUSINESS_REQUIREMENTS.md`.
-- KPI definitions, validation rules và baseline theo `KPI_DICTIONARY.md`.
-- Time Period baseline: Morning `10:00-11:59`, Afternoon `12:00-16:59`, Evening `17:00-20:59`.
-- Full Load tháng 01/2019 và hai Incremental Load mô phỏng cho tháng 02/2019, tháng 03/2019.
-- Data quality checks cơ bản, Staging, Data Warehouse và dbt tests.
-- Hai trang Power BI: Overview và Detailed/Diagnostic Analytics.
-- AI-generated Summary.
-- Báo cáo và video demo.
+- Amazon Delivery Dataset: 43.739 bản ghi, 16 cột, 44 Active Day từ 2022-02-11 đến 2022-04-06.
+- Phân tích BI mô tả/chẩn đoán hiệu suất giao hàng chặng cuối.
+- Theo dõi khối lượng, Delivery Time, phân bố, pickup delay, valid distance và valid rating.
+- Phân tích theo thời gian, Traffic, Weather, Vehicle, Area, Category, age group và rating group.
+- Data quality monitoring cho missing, rollover, rating, age, categorical values và coordinates.
+- Thiết kế Dimensional Model, Mapping và Full/Incremental Load ở các task tiếp theo.
+- Sau khi thiết kế được duyệt: Mage.ai, SQL Server, dbt, Power BI và AI Summary có thể kiểm chứng.
+- Báo cáo, bằng chứng kiểm thử và video demo.
 
-## Out of scope trong giai đoạn đầu
+## Out of scope
 
-- Phân tích SKU hoặc sản phẩm chi tiết.
-- Customer Lifetime Value, khách hàng cá nhân hoặc hành vi mua lặp lại.
-- Phân tích tồn kho, return, discount hoặc chi phí vận hành.
-- Machine Learning.
-- Dự báo dài hạn hoặc phân tích mùa vụ.
-- Chatbot phức tạp.
-- Streaming thời gian thực.
-- Nhiều Fact không cần thiết.
-- Nhiều nguồn dữ liệu ngoài Kaggle.
-- Cloud deployment.
-- Các chức năng không phục vụ rubric.
+- Machine Learning và dự báo.
+- Phân tích doanh thu, lợi nhuận, chi phí hoặc số lượng sản phẩm.
+- Đánh giá hiệu suất cá nhân agent.
+- Suy luận quan hệ nhân quả.
+- On-time Delivery Rate hoặc kết luận “giao trễ” khi không có SLA.
+- Công khai drop coordinate chính xác ở mức dòng.
+- Kết luận xu hướng dài hạn hoặc mùa vụ từ 44 ngày dữ liệu.
+- Khẳng định dataset là dữ liệu vận hành chính thức của Amazon.
 
-## Pending decisions
+## Pending design decisions
 
-- Cấu trúc cột chi tiết của Fact và Dimension.
-- Surrogate key và Unknown Member.
-- SCD strategy.
-- Phương án chia sẻ SQL Server cho nhóm.
-- LLM provider.
-- Màu sắc và phong cách dashboard.
-- Thiết kế AI Summary cụ thể.
+- Grain Data Warehouse, Fact, Dimension, key và relationship.
+- Star Schema và Source-to-Target Mapping.
+- Watermark, idempotency, rerun và rejected-record handling.
+- Kiến trúc và phương án chia sẻ SQL Server.
+- Dashboard layout, AI Summary và LLM provider.
+
+Business Baseline đã được duyệt; các quyết định trên thuộc MOD-01 trở đi và chưa được triển khai.

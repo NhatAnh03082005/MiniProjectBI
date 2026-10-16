@@ -1,46 +1,38 @@
 # Data
 
-## Official Dataset
+## Official dataset
 
-- **Dataset:** Supermarket Sales.
-- **Author:** Fares Ashraf.
-- **Source:** Kaggle, <https://www.kaggle.com/datasets/faresashraf1001/supermarket-sales>.
-- **License:** Apache 2.0.
-- **Version:** 2.
-- **Original downloaded file:** `SuperMarket Analysis.csv`.
-- **Project CSV:** `raw/supermarket_sales.csv`.
-- **Archive ZIP:** `raw/archive/supermarket_sales_faresashraf_v2.zip`.
-- **Quy mô:** 1.000 dòng dữ liệu, không tính header; 17 cột.
-- **Khoảng thời gian:** 2019-01-01 đến 2019-03-30.
-- **SHA-256 CSV:** `C5E0490DA62001D3066A56B3AA9C891C8D3ED42B6C2D09C8CA18B2A409AC93CD`.
+- **Dataset:** Amazon Delivery Dataset.
+- **Người đăng Kaggle:** Sujal Suthar.
+- **Nguồn:** <https://www.kaggle.com/datasets/sujalsuthar/amazon-delivery-dataset>.
+- **License:** MIT, theo metadata đã xác minh trong báo cáo profiling.
+- **CSV:** `raw/amazon_delivery.csv`.
+- **ZIP:** `raw/archive/amazon_delivery_original.zip`.
+- **Quy mô:** 43.739 dòng, không tính header; 16 cột.
+- **Khoảng thời gian:** 2022-02-11 đến 2022-04-06; 44 Active Day.
+- **SHA-256 CSV:** `B922DFBDFED11AC2C9508C9E915326364FC95A2D00440B4C3E01E56BFFB6A4ED`.
+- **SHA-256 ZIP:** `0ADD736B4AFD2A616856003CBC736F05AFD02242AC4E3F416F5C07FC53EB25A8`.
+
+> Dataset được sử dụng theo tên do người đăng Kaggle cung cấp. Project không khẳng định đây là dữ liệu vận hành chính thức của Amazon.
+
+## Data handling rules
+
+- Không chỉnh sửa, đổi tên, di chuyển hoặc ghi đè hai file raw.
+- Không sửa dấu hoặc thay thế raw coordinates.
+- Chỉ tạo artefact dẫn xuất từ bản sao sau khi Mapping và Load Design được duyệt.
+- Cleaning và standardization thực hiện tại lớp transformation, không sửa raw.
+- Rejected record phải kèm lý do và bằng chứng kiểm tra.
+- Không công khai drop coordinate chính xác ở mức dòng.
 
 ## Ý nghĩa thư mục
 
 | Thư mục | Mục đích |
 |---|---|
-| `raw/` | Lưu dữ liệu nguồn nguyên trạng và thư mục ZIP lưu trữ; không chỉnh sửa file nguồn |
-| `full_load/` | Sẽ lưu batch nạp ban đầu được tạo từ bản sao của raw |
-| `incremental/` | Sẽ lưu các batch tăng thêm được tạo từ bản sao của raw |
-| `rejected/` | Sẽ lưu bản ghi bị từ chối cùng lý do khi pipeline được triển khai |
-
-## Batch baseline
-
-| Batch | Khoảng dữ liệu | Số dòng |
-|---|---|---:|
-| Full Load | 01/2019 | 352 |
-| Incremental 1 | 02/2019 | 303 |
-| Incremental 2 | 03/2019, dữ liệu quan sát đến ngày 30 | 345 |
-
-Watermark dự kiến dựa trên Date kết hợp Time. `Invoice ID` được dùng để kiểm tra idempotency và tránh nạp trùng.
-
-## Data Handling Rules
-
-- Không chỉnh sửa, đổi tên, di chuyển hoặc ghi đè file trong `raw/`.
-- Chỉ tạo batch Full/Incremental từ bản sao, không cắt trực tiếp raw data.
-- Cleaning và standardization được thực hiện qua dbt ở giai đoạn sau.
-- Không loại bỏ 9 giao dịch giá trị cao bị IQR gắn cờ khi chưa có bằng chứng là lỗi.
-- Rejected records phải kèm lý do và bằng chứng kiểm tra.
+| `raw/` | CSV nguồn nguyên trạng và ZIP archive |
+| `full_load/` | Batch nạp ban đầu sau khi thiết kế được duyệt |
+| `incremental/` | Batch tăng thêm sau khi thiết kế được duyệt |
+| `rejected/` | Record bị từ chối kèm lý do khi pipeline được triển khai |
 
 ## Trạng thái
 
-Dataset Selection và Data Profiling đã hoàn thành. Chưa tạo file batch và chưa triển khai pipeline Mage.ai.
+Dataset Selection, Data Profiling và Business Baseline đã hoàn thành. Chưa tạo batch, pipeline, SQL Server, staging hoặc Data Warehouse.

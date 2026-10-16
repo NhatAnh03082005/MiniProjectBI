@@ -9,30 +9,22 @@
 - Fact dùng tiền tố `fact_`.
 - Bảng audit hoặc log phải có tên thể hiện rõ mục đích.
 - Không hard-code password, credential hoặc API key.
-- Secret chỉ được đặt trong `.env`; file này không được commit.
+- Secret chỉ đặt trong `.env`; `.env` không được commit.
 - `.env.example` chỉ chứa tên biến và giá trị trống.
-- Tên vật lý cuối cùng của khóa và bảng được xác nhận trong giai đoạn Dimensional Modeling.
+- Raw giữ nguyên tên cột và giá trị nguồn; không đổi tên, sửa hoặc ghi đè raw.
+- Tên vật lý cuối cùng của bảng, khóa, cột chuẩn hóa và cột dẫn xuất chỉ được chốt trong MOD-01/MAP-01.
 
-Các tài liệu quản lý hiện dùng tên chữ hoa theo cấu trúc project đã thống nhất; quy tắc `lowercase_snake_case` áp dụng cho artefact kỹ thuật được tạo ở các giai đoạn sau.
+## Tên cột raw hiện hành
 
-## Mapping tên cột đã xác nhận
+`Order_ID`, `Agent_Age`, `Agent_Rating`, `Store_Latitude`, `Store_Longitude`, `Drop_Latitude`, `Drop_Longitude`, `Order_Date`, `Order_Time`, `Pickup_Time`, `Weather`, `Traffic`, `Vehicle`, `Area`, `Delivery_Time`, `Category`.
 
-| Raw source | Standardized name |
-|---|---|
-| Invoice ID | `invoice_id` |
-| Customer type | `customer_type` |
-| Product line | `product_line` |
-| Unit price | `unit_price` |
-| Tax 5% | `tax_5_percent` |
-| Sales | `sales_amount` |
-| Date | `transaction_date` |
-| Time | `transaction_time` |
-| Payment | `payment_method` |
-| gross margin percentage | `gross_margin_percentage` |
-| gross income | `gross_income` |
-| Rating | `rating` |
+## Tên logic đã khóa cho rule/KPI
 
-- Không đổi tên cột trong raw CSV.
-- Việc chuẩn hóa tên được thực hiện trong dbt staging model ở giai đoạn sau.
-- Không tạo cột nguồn `Total`; file raw sử dụng `Sales` và tên chuẩn hóa dự kiến là `sales_amount`.
-- Tên vật lý cuối cùng của khóa, bảng và các cột dẫn xuất được xác nhận trong Dimensional Modeling.
+- `pickup_delay_minutes`: chênh lệch phút sau khi áp dụng pickup rollover.
+- `delivery_distance_km`: Haversine Distance, không thay raw coordinates.
+- `valid_distance_flag`: đạt rule đủ tọa độ, store khác `(0,0)` và distance ≤ 50 km.
+- `valid_rating_flag`: Agent Rating trong khoảng 1,0–5,0.
+- `underage_agent_flag`: Agent Age dưới 18.
+- `Metropolitan`: giá trị chuẩn hóa của raw `Metropolitian` ở lớp transformation.
+
+Các tên logic không chốt tên bảng vật lý. Không tạo `dim_agent` khi không có `Agent_ID`.
