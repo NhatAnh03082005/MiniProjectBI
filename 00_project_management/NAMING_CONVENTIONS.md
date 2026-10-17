@@ -12,7 +12,7 @@
 - Secret chỉ đặt trong `.env`; `.env` không được commit.
 - `.env.example` chỉ chứa tên biến và giá trị trống.
 - Raw giữ nguyên tên cột và giá trị nguồn; không đổi tên, sửa hoặc ghi đè raw.
-- Tên vật lý cuối cùng của bảng, khóa, cột chuẩn hóa và cột dẫn xuất chỉ được chốt trong MOD-01/MAP-01.
+- Tên logical của Fact, Dimension và key đã được chốt trong MOD-01; data type vật lý, staging, intermediate và mapping chi tiết được chốt trong MAP-01/physical design.
 
 ## Tên cột raw hiện hành
 
@@ -27,4 +27,20 @@
 - `underage_agent_flag`: Agent Age dưới 18.
 - `Metropolitan`: giá trị chuẩn hóa của raw `Metropolitian` ở lớp transformation.
 
-Các tên logic không chốt tên bảng vật lý. Không tạo `dim_agent` khi không có `Agent_ID`.
+## Fact chính thức ở mức logical design
+
+`fact_delivery`
+
+## Dimension chính thức ở mức logical design
+
+`dim_date`, `dim_delivery_condition`, `dim_vehicle`, `dim_area`, `dim_category`.
+
+## Key chính thức ở mức logical design
+
+`delivery_key`, `order_id`, `date_key`, `delivery_condition_key`, `vehicle_key`, `area_key`, `category_key`.
+
+- `order_id` là degenerate business key trong Fact và phải unique, not null.
+- Dimension dùng surrogate key số nguyên; Unknown Member dùng key `0`.
+- Không tạo `dim_agent` hoặc `dim_time`.
+- Tên staging, intermediate, data type vật lý và mapping chi tiết sẽ được chốt trong MAP-01.
+- Các tên trên là logical design đã duyệt; không tuyên bố bảng đã được tạo vật lý.

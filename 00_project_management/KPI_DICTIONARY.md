@@ -169,7 +169,7 @@
 | Định nghĩa | Trung bình Agent Rating từ 1,0 đến 5,0 |
 | Công thức nghiệp vụ | `AVG(Agent_Rating WHERE rating BETWEEN 1.0 AND 5.0)` |
 | DAX dự kiến | `Average Valid Agent Rating := CALCULATE(AVERAGE([Agent_Rating]), [Agent_Rating] >= 1, [Agent_Rating] <= 5)` |
-| Numerator | Tổng 43.632 rating hợp lệ |
+| Numerator | Tổng giá trị Agent_Rating của 43.632 dòng có rating hợp lệ từ 1,0 đến 5,0 |
 | Denominator | 43.632 dòng có rating từ 1,0 đến 5,0 |
 | Filter context | Date và nhóm phân tích; không dùng để xếp hạng cá nhân |
 | Include | Rating 1,0–5,0, gồm 38 giá trị 1,0 |

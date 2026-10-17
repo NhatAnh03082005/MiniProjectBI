@@ -85,6 +85,8 @@ Delivery Time dùng phút theo project assumption nhưng metadata Kaggle truy xu
 - Dataset Selection v2: **Done**.
 - Data Profiling v2: **Done**.
 - Business Baseline v2: **Approved**.
-- Dimensional Modeling: **Todo**.
+- Logical Dimensional Model (`MOD-01`): **Done**.
+- Star Schema diagram (`MOD-02`): **Todo**.
+- Source-to-Target Mapping (`MAP-01`): **Todo**.
 
-Chưa chốt grain Data Warehouse, tên vật lý Fact/Dimension, Star Schema hoặc Source-to-Target Mapping.
+Logical grain, Fact, năm Dimension, key strategy, Unknown Member, SCD và relationships đã được duyệt. Chưa vẽ Star Schema diagram, chưa chốt data type vật lý chi tiết và chưa tạo Source-to-Target Mapping.

@@ -11,7 +11,7 @@ Project xây dựng hệ thống Business Intelligence tích hợp Generative AI
 
 > Dataset được sử dụng theo tên do người đăng Kaggle cung cấp. Project không khẳng định đây là dữ liệu vận hành chính thức của Amazon.
 
-Business Baseline đã được duyệt. Task tiếp theo là Dimensional Modeling; chưa chốt tên vật lý Fact/Dimension, Star Schema hoặc Mapping.
+Business Baseline và Logical Dimensional Model đã được duyệt. Task tiếp theo là `MOD-02`; chưa vẽ Star Schema diagram, chưa chốt chi tiết schema vật lý hoặc Mapping.
 
 ## 2. Những gì đã hoàn thành
 
@@ -24,6 +24,7 @@ Business Baseline đã được duyệt. Task tiếp theo là Dimensional Modeli
 | BUS-05 | Đúng 8 Business Questions và traceability |
 | KPI-02 | Đúng 10 KPI chính và diagnostic measures |
 | HOF-02 | Team Handoff Guide cho baseline hiện hành và task thiết kế tiếp theo |
+| MOD-01 | `DIMENSIONAL_MODEL.md` đã Approved; grain, Fact, Dimension, keys, SCD và relationships đã chốt ở mức logical design |
 
 ## 3. File bắt buộc phải đọc
 
@@ -36,9 +37,10 @@ Business Baseline đã được duyệt. Task tiếp theo là Dimensional Modeli
 5. `00_project_management/DATA_PROFILE_AMAZON_DELIVERY.md`
 6. `00_project_management/BUSINESS_REQUIREMENTS.md`
 7. `00_project_management/KPI_DICTIONARY.md`
-8. `00_project_management/DECISION_LOG.md`
-9. `00_project_management/NAMING_CONVENTIONS.md`
-10. `00_project_management/TASK_BOARD.md`
+8. `00_project_management/DIMENSIONAL_MODEL.md`
+9. `00_project_management/DECISION_LOG.md`
+10. `00_project_management/NAMING_CONVENTIONS.md`
+11. `00_project_management/TASK_BOARD.md`
 
 ## 4. Quyết định đã khóa
 
@@ -58,16 +60,21 @@ Business Baseline đã được duyệt. Task tiếp theo là Dimensional Modeli
 - Có đúng 8 Business Questions và đúng 10 KPI chính.
 - Dataset không có semi-additive measure.
 - Không tạo `dim_agent` khi thiếu `Agent_ID`.
+- Grain DW: một dòng trong `dw.fact_delivery` là một bản ghi giao hàng nguồn duy nhất theo `Order_ID`; không khẳng định completed delivery.
+- Một Fact logical: `dw.fact_delivery`; `Order_ID` là degenerate business key.
+- Năm Dimension: `dw.dim_date`, `dw.dim_delivery_condition`, `dw.dim_vehicle`, `dw.dim_area`, `dw.dim_category`.
+- Dimension dùng surrogate key số nguyên và Unknown Member key `0`.
+- `dim_date` là dimension tĩnh; các Dimension phân loại dùng SCD Type 1.
+- Relationships là Dimension 1 → Fact nhiều, filter một chiều.
 
 ## 5. Task tiếp theo
 
-- `MOD-01`: chốt grain Data Warehouse, Fact, Dimension, keys và relationships.
-- `MOD-02`: vẽ Star Schema sau khi MOD-01 được duyệt.
-- `MAP-01`: tạo Source-to-Target Mapping sau khi mô hình được chốt.
+- `MOD-02`: vẽ và đặc tả Star Schema dựa trên `DIMENSIONAL_MODEL.md` đã Approved.
+- `MAP-01`: tạo Source-to-Target Mapping sau khi `MOD-02` hoàn thành và chi tiết schema được duyệt.
 - `LOAD-01`: thiết kế Full/Incremental Load, watermark, idempotency và rerun.
 - `ARC-01`: chốt kiến trúc và phương án chia sẻ SQL Server.
 
-Tất cả task trên vẫn **Todo**. Không tự đánh dấu Done trước review và bằng chứng.
+Không tự thiết kế lại MOD-01. Nếu cần thay đổi logical model, phải được review và ghi vào Decision Log. Tất cả task nêu trên vẫn **Todo**; không tự đánh dấu Done trước review và bằng chứng.
 
 ## 6. Gợi ý phân công
 
@@ -103,7 +110,7 @@ Tất cả task trên vẫn **Todo**. Không tự đánh dấu Done trước rev
 
 | Task | Đầu ra bắt buộc | Kiểm tra bắt buộc | Bằng chứng bàn giao |
 |---|---|---|---|
-| MOD-01/MOD-02 | Grain DW, danh sách Fact/Dimension, keys, relationships và sơ đồ Star Schema | Trace đủ 8 BQ/10 KPI; không tạo agent dimension; không mâu thuẫn grain nguồn | Tài liệu quyết định, sơ đồ, review note và cập nhật Task Board/Decision Log |
+| MOD-02 | Sơ đồ Star Schema và đặc tả bảng/cột dựa trên logical model đã duyệt | Đúng một Fact/năm Dimension, cardinality 1 → nhiều, filter một chiều, trace đủ 8 BQ/10 KPI | Sơ đồ, đặc tả, review note và cập nhật Task Board/Decision Log |
 | MAP-01 | Mapping đủ 16 cột nguồn, derived fields, data type, null/quality handling và target hợp lệ | Mapping coverage 16/16; rules cho rollover, rating, categorical và distance; raw không đổi | Mapping file, checklist coverage và review note |
 | LOAD-01 | Thiết kế Full/Incremental, watermark, tie-breaker, idempotency, rerun và rejected handling | Tổng batch đối soát 43.739; xử lý Order Time missing; không tạo batch vật lý trong bước thiết kế nếu chưa được phép | Design document, test scenarios, expected reconciliation và review note |
 

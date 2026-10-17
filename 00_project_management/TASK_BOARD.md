@@ -9,7 +9,7 @@
 | BUS-05 | Business questions | Chốt đúng 8 Business Questions và traceability | Trưởng nhóm + thành viên 4 | BUS-04 | 8 BQ và traceability | Ngày 2 | Done | Không |
 | KPI-02 | KPI baseline | Chốt đúng 10 KPI chính và diagnostic measures | Trưởng nhóm + thành viên 4 | BUS-04, BUS-05 | `KPI_DICTIONARY.md` | Ngày 2 | Done | Không |
 | HOF-02 | Project coordination | Team Handoff Guide cho Business Baseline hiện hành và các task thiết kế tiếp theo | Trưởng nhóm | Baseline đã duyệt | `TEAM_HANDOFF_GUIDE.md` | Ngày 2 | Done | Không |
-| MOD-01 | Dimensional modeling | Chốt grain DW, Fact, Dimension, keys và relationships | Trưởng nhóm + thành viên 3 | Requirements và KPI Dictionary | Thiết kế mô hình được duyệt | Ngày 2 | Todo | Chưa bắt đầu |
+| MOD-01 | Dimensional modeling | Chốt grain DW, Fact, Dimension, keys và relationships | Trưởng nhóm + thành viên 3 | Requirements và KPI Dictionary | `00_project_management/DIMENSIONAL_MODEL.md` đã Approved | Ngày 2 | Done | Không |
 | MOD-02 | Dimensional modeling | Vẽ Star Schema | Thành viên 3 | MOD-01 | Sơ đồ mô hình có khóa và quan hệ | Ngày 2 | Todo | Phụ thuộc MOD-01 |
 | MAP-01 | Data mapping | Tạo Source-to-Target Mapping | Thành viên 3 | Profile và Star Schema | Mapping đủ 16 cột và derived fields | Ngày 2 | Todo | Phụ thuộc MOD-01 |
 | LOAD-01 | Full/Incremental design | Thiết kế batch, watermark, idempotency và rerun | Thành viên 2 | Batch proposal và mapping | Load design được duyệt | Ngày 2 | Todo | Phụ thuộc MAP-01 |
@@ -24,4 +24,4 @@
 | E2E-01 | End-to-end testing | Kiểm thử toàn bộ luồng và thu thập bằng chứng | Trưởng nhóm + cả nhóm | Các thành phần tích hợp | Biên bản và bằng chứng | Ngày 6 | Todo | Phụ thuộc MAG/DBT/DWH/PBI/AI |
 | SUB-01 | Final submission | Kiểm tra và đóng gói bài nộp | Trưởng nhóm | Toàn bộ deliverables | Gói nộp cuối | Ngày 6 | Todo | Phụ thuộc RPT/VID/E2E |
 
-> Có đúng 7 task Done: SET-01, DAT-03, DAT-04, BUS-04, BUS-05, KPI-02 và HOF-02. Mọi task từ MOD-01 trở đi vẫn Todo; không có task kỹ thuật nào Done.
+> Có đúng 8 task Done: SET-01, DAT-03, DAT-04, BUS-04, BUS-05, KPI-02, HOF-02 và MOD-01. Task tiếp theo là MOD-02. MOD-02, MAP-01, LOAD-01, ARC-01 và toàn bộ task triển khai kỹ thuật vẫn Todo.

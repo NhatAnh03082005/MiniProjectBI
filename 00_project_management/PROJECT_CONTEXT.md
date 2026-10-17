@@ -31,14 +31,24 @@
 - Không có SLA hoặc On-time Delivery Rate; Share Above Baseline P90 dùng ngưỡng nội bộ 195 phút.
 - Quality rules đã khóa cho missing, rollover, rating, age, categorical values, coordinates, distance và privacy.
 
+## Logical Dimensional Model đã duyệt
+
+- Grain Data Warehouse: một dòng trong `dw.fact_delivery` đại diện cho một bản ghi giao hàng nguồn duy nhất, nhận diện bởi `Order_ID` hợp lệ và duy nhất trong snapshot.
+- Một Fact logical: `dw.fact_delivery`; `Order_ID` là degenerate business key.
+- Năm Dimension logical: `dw.dim_date`, `dw.dim_delivery_condition`, `dw.dim_vehicle`, `dw.dim_area`, `dw.dim_category`.
+- Dimension dùng surrogate key số nguyên; Unknown Member dùng key `0`.
+- `dim_date` là dimension tĩnh; các Dimension phân loại dùng SCD Type 1.
+- Relationships là Dimension 1 → Fact nhiều, filter một chiều.
+- Không tạo `dim_agent`, `dim_time` hoặc Location Dimension từ exact coordinates.
+
 ## Nội dung chưa chốt
 
-- Grain Data Warehouse; Fact, Dimension, keys và relationships.
-- Star Schema và Source-to-Target Mapping.
+- Star Schema diagram chi tiết và Source-to-Target Mapping.
+- Kiểu dữ liệu vật lý cuối cùng và thuật toán technical key.
 - Batch, watermark, idempotency và rerun design chính thức.
 - Kiến trúc triển khai và phương án chia sẻ SQL Server.
 - Dashboard, AI Summary và LLM provider.
 
 ## Trạng thái triển khai
 
-Task 1–6 và Handoff đã hoàn thành. Task tiếp theo là `MOD-01`. Chưa có Fact/Dimension vật lý, pipeline, SQL, dbt model, Power BI hoặc AI component được triển khai; các đối tượng nêu trong profiling chỉ là ứng viên.
+Task 1–6, Handoff và `MOD-01` đã hoàn thành. Task tiếp theo là `MOD-02`. Logical model đã được duyệt nhưng chưa có Fact/Dimension vật lý, Star Schema diagram, pipeline, SQL, dbt model, Power BI hoặc AI component được triển khai.

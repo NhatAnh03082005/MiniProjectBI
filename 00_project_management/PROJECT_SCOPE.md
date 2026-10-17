@@ -7,7 +7,8 @@
 - Theo dõi khối lượng, Delivery Time, phân bố, pickup delay, valid distance và valid rating.
 - Phân tích theo thời gian, Traffic, Weather, Vehicle, Area, Category, age group và rating group.
 - Data quality monitoring cho missing, rollover, rating, age, categorical values và coordinates.
-- Thiết kế Dimensional Model, Mapping và Full/Incremental Load ở các task tiếp theo.
+- Logical Dimensional Model đã được phê duyệt với grain DW, một Fact, năm Dimension, surrogate keys, Unknown Member, SCD và relationships.
+- Star Schema diagram, Mapping và Full/Incremental Load ở các task tiếp theo.
 - Sau khi thiết kế được duyệt: Mage.ai, SQL Server, dbt, Power BI và AI Summary có thể kiểm chứng.
 - Báo cáo, bằng chứng kiểm thử và video demo.
 
@@ -24,10 +25,10 @@
 
 ## Pending design decisions
 
-- Grain Data Warehouse, Fact, Dimension, key và relationship.
-- Star Schema và Source-to-Target Mapping.
+- Star Schema diagram và Source-to-Target Mapping.
+- Kiểu dữ liệu vật lý cuối cùng và chi tiết technical key.
 - Watermark, idempotency, rerun và rejected-record handling.
 - Kiến trúc và phương án chia sẻ SQL Server.
 - Dashboard layout, AI Summary và LLM provider.
 
-Business Baseline đã được duyệt; các quyết định trên thuộc MOD-01 trở đi và chưa được triển khai.
+Business Baseline và Logical Dimensional Model (`MOD-01`) đã được duyệt. Chưa có Data Warehouse hoặc bảng vật lý nào được triển khai; các quyết định còn lại thuộc `MOD-02` trở đi.

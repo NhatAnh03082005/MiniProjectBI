@@ -11,7 +11,7 @@
 | DEC-030 | 2026-10-16 | Bối cảnh hiện hành là phân tích hiệu suất giao hàng chặng cuối | Bám sát các trường và phạm vi dữ liệu | Nhóm | Đã xác nhận |
 | DEC-031 | 2026-10-16 | Dùng tuyên bố provenance: “Dataset được sử dụng theo tên do người đăng Kaggle cung cấp. Project không khẳng định đây là dữ liệu vận hành chính thức của Amazon.” | Tránh diễn giải tên dataset vượt quá bằng chứng nguồn | Nhóm | Đã xác nhận |
 | DEC-032 | 2026-10-16 | Giữ nguyên `amazon_delivery.csv` và `amazon_delivery_original.zip` với checksum đã ghi nhận | Bảo toàn raw và khả năng đối soát | Nhóm | Đã xác nhận |
-| DEC-033 | 2026-10-16 | Chưa chốt grain Data Warehouse, Fact, Dimension, KPI, SLA và quality rules | Trạng thái trước Business Baseline | Nhóm | Superseded một phần bởi DEC-035–DEC-050; phần DW/Fact/Dimension vẫn mở |
+| DEC-033 | 2026-10-16 | Chưa chốt grain Data Warehouse, Fact, Dimension, KPI, SLA và quality rules | Trạng thái trước Business Baseline và MOD-01 | Nhóm | Superseded bởi DEC-035–DEC-050 và DEC-051–DEC-060 |
 | DEC-034 | 2026-10-16 | Phê duyệt `DATA_PROFILE_AMAZON_DELIVERY.md` làm baseline phân tích | Profiling đã review; open decisions được chuyển sang baseline và task thiết kế | Nhóm | Đã xác nhận |
 | DEC-035 | 2026-10-16 | Grain nghiệp vụ là một bản ghi giao hàng nguồn duy nhất trên mỗi `Order_ID`; không khẳng định completed delivery | Dataset không có delivery status hoặc attempt history | Nhóm | Đã xác nhận |
 | DEC-036 | 2026-10-16 | Hiển thị Delivery Time bằng phút theo project assumption và ghi rõ metadata Kaggle chưa xác nhận đơn vị | Dẫn nguồn thứ cấp hỗ trợ giả định nhưng metadata truy xuất được chưa đủ | Nhóm | Đã xác nhận |
@@ -29,5 +29,16 @@
 | DEC-048 | 2026-10-16 | Chốt đúng 10 KPI chính trong KPI Dictionary | Chuẩn hóa công thức, context, baseline và cảnh báo | Nhóm | Đã xác nhận |
 | DEC-049 | 2026-10-16 | Dataset không có measure semi-additive | Nguồn chỉ có event records, không có balance hoặc snapshot | Nhóm | Đã xác nhận |
 | DEC-050 | 2026-10-16 | Business Baseline được duyệt để chuyển sang Dimensional Modeling | Profiling, Requirements, 8 BQ, 10 KPI và handoff đã hoàn thành | Nhóm | Đã xác nhận |
+| DEC-051 | 2026-10-17 | Chốt grain Data Warehouse: một dòng trong `dw.fact_delivery` đại diện cho một bản ghi giao hàng nguồn duy nhất, nhận diện bởi `Order_ID` hợp lệ và duy nhất trong snapshot | Giữ grain nguồn, không khẳng định completed delivery hoặc hạ xuống delivery attempt | Nhóm | Đã xác nhận |
+| DEC-052 | 2026-10-17 | Chọn một Fact logical là `dw.fact_delivery` với baseline dự kiến 43.739 dòng | Đáp ứng 8 Business Questions và 10 KPI ở event grain | Nhóm | Đã xác nhận |
+| DEC-053 | 2026-10-17 | Chọn năm Dimension logical: `dw.dim_date`, `dw.dim_delivery_condition`, `dw.dim_vehicle`, `dw.dim_area`, `dw.dim_category` | Bao phủ các chiều phân tích đã duyệt mà không tăng độ phức tạp không cần thiết | Nhóm | Đã xác nhận |
+| DEC-054 | 2026-10-17 | Giữ `Order_ID` trong Fact dưới dạng degenerate business key; `order_id` phải unique và not null | Bảo toàn business key nguồn và hỗ trợ kiểm tra idempotency | Nhóm | Đã xác nhận |
+| DEC-055 | 2026-10-17 | Dimension dùng surrogate key số nguyên và Unknown Member key `0`; lookup failure phải được audit | Không làm mất Fact khi categorical missing hoặc lookup thất bại | Nhóm | Đã xác nhận |
+| DEC-056 | 2026-10-17 | `dim_date` là dimension tĩnh; các Dimension phân loại dùng SCD Type 1; không dùng SCD Type 2 | Nguồn là snapshot và không có lịch sử thay đổi phù hợp | Nhóm | Đã xác nhận |
+| DEC-057 | 2026-10-17 | Không tạo `dim_agent` và `dim_time`; giữ order hour/time period trong Fact | Không có `Agent_ID`; time-of-day chưa cần Dimension riêng | Nhóm | Đã xác nhận |
+| DEC-058 | 2026-10-17 | Kết hợp Weather và Traffic trong junk dimension `dw.dim_delivery_condition` | Hai thuộc tính có cardinality thấp và cần phân tích riêng hoặc kết hợp | Nhóm | Đã xác nhận |
+| DEC-059 | 2026-10-17 | Không đưa exact drop coordinates vào semantic/public analytical model; chỉ công bố distance, validity flag và distance band | Tuân thủ privacy rule và vẫn hỗ trợ KPI khoảng cách | Nhóm | Đã xác nhận |
+| DEC-060 | 2026-10-17 | Relationships dùng Dimension 1 → Fact nhiều, filter một chiều; không many-to-many, bidirectional hoặc Dimension-to-Dimension | Giữ Star Schema rõ ràng và filter context ổn định | Nhóm | Đã xác nhận |
+| DEC-061 | 2026-10-17 | Phê duyệt `DIMENSIONAL_MODEL.md` và hoàn thành MOD-01 để chuyển sang MOD-02 | Logical model nhất quán với Business Baseline và đạt acceptance checklist | Nhóm | Đã xác nhận |
 
 Không renumber Decision ID. Quyết định kiến trúc không đồng nghĩa thành phần kỹ thuật đã được triển khai.
