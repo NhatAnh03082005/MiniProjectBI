@@ -1,0 +1,75 @@
+version: 2
+
+sources:
+  - name: staging
+    description: >
+      Immutable raw landing table written by Mage.ai. dbt must not alter raw
+      values or use this table as a semantic-model output.
+    database: AmazonDeliveryBI
+    schema: staging
+    tables:
+      - name: raw_amazon_delivery
+        description: >
+          One physical source row plus required ingest lineage. dbt reads this
+          SQL Server table only; it does not read the CSV directly or recreate
+          the raw table.
+        meta:
+          source_grain: one physical row ingested from a source file
+          raw_behavior: immutable
+          business_key_policy: >
+            Order_ID is evaluated after staging normalization. It is not unique
+            at raw-source scope because it can recur across batches.
+        columns:
+          - name: staging_row_id
+            description: SQL Server identity primary key for the physical raw row.
+            tests:
+              - not_null
+              - unique
+          - name: Order_ID
+            description: >
+              Raw source business identifier. It remains nullable at this layer
+              to preserve malformed records, and is intentionally not tested as
+              unique or not_null here. The valid normalized Fact grain is one
+              row per order_id after the load policy is applied.
+            meta:
+              business_key: true
+              validate_after_normalization: true
+          - name: Agent_Age
+          - name: Agent_Rating
+          - name: Store_Latitude
+          - name: Store_Longitude
+          - name: Drop_Latitude
+          - name: Drop_Longitude
+          - name: Order_Date
+          - name: Order_Time
+          - name: Pickup_Time
+          - name: Weather
+          - name: Traffic
+          - name: Vehicle
+          - name: Area
+          - name: Delivery_Time
+          - name: Category
+          - name: source_file_name
+            description: File name supplied by Mage.ai for source lineage.
+            tests:
+              - not_null
+            meta:
+              lineage_field: true
+          - name: source_row_number
+            description: Physical row number supplied by Mage.ai within the source file.
+            tests:
+              - not_null
+            meta:
+              lineage_field: true
+          - name: load_batch_id
+            description: Audit batch identifier supplied by Mage.ai.
+            tests:
+              - not_null
+            meta:
+              lineage_field: true
+          - name: loaded_at
+            description: Timestamp at which Mage.ai loaded the physical raw row.
+            tests:
+              - not_null
+            meta:
+              lineage_field: true

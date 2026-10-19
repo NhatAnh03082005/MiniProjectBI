@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: int_delivery_enriched
+    description: >
+      Enriched delivery records used to build the approved Dimensions and
+      fact_delivery. It retains invalid or missing source values with flags.
+      Duplicate resolution across batches remains pending LOAD-01.
+    columns:
+      - name: delivery_key
+        description: SHA-256 technical key derived deterministically from order_id.
+      - name: order_id
+        description: >
+          Business key for the baseline snapshot. Uniqueness across rerun or
+          repeated batches cannot be tested until LOAD-01 defines a policy.
+      - name: weather_name
+      - name: traffic_level
+      - name: vehicle_type
+      - name: area_name
+      - name: category_name
+      - name: pickup_delay_minutes
+      - name: pickup_rollover_flag
+      - name: delivery_distance_km
+      - name: valid_distance_flag
+      - name: valid_rating_flag
+      - name: missing_operational_context_flag
+      - name: source_file_name
+        tests:
+          - not_null
+      - name: source_row_number
+        tests:
+          - not_null
+      - name: load_batch_id
+        tests:
+          - not_null
+      - name: loaded_at
+        tests:
+          - not_null

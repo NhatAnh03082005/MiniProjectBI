@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: stg_amazon_delivery
+    description: >
+      Normalized staging layer. It retains one row per raw staging record and
+      does not join dimensions or discard records because of missing values.
+    columns:
+      - name: staging_row_id
+        description: Physical raw-row identifier retained for lineage.
+        tests:
+          - not_null
+          - unique
+      - name: order_id
+        description: Trimmed source identifier. Validation for Fact grain occurs downstream.
+      - name: agent_age
+        description: Agent age parsed with TRY_CONVERT; invalid or missing values remain null.
+      - name: agent_rating_raw
+        description: Parsed raw rating, retaining values outside the analysis-valid range.
+      - name: store_latitude
+      - name: store_longitude
+      - name: drop_latitude
+      - name: drop_longitude
+      - name: order_date
+      - name: order_time
+        description: Parsed order time; missing values remain null.
+      - name: pickup_time
+        description: Parsed pickup time; missing values remain null.
+      - name: weather_name
+      - name: traffic_level
+      - name: vehicle_type
+      - name: area_name_raw
+        description: Trimmed source area, retained for technical lineage.
+      - name: area_name
+        description: Area normalized only for the approved Metropolitian correction.
+      - name: delivery_time_minutes
+        description: Parsed delivery duration; no outlier is removed at staging.
+      - name: category_name
+      - name: source_file_name
+        tests:
+          - not_null
+      - name: source_row_number
+        tests:
+          - not_null
+      - name: load_batch_id
+        tests:
+          - not_null
+      - name: loaded_at
+        tests:
+          - not_null

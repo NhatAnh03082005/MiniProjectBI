@@ -1,0 +1,13 @@
+# Local Python runtimes and packages
+.python312/
+.venv/
+profiles.yml
+.user.yml
+.env
+.env.*
+
+# dbt generated artifacts
+target/
+logs/
+dbt_packages/
+*.log

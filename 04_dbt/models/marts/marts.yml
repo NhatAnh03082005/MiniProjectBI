@@ -1,0 +1,96 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: Static 2022 calendar dimension with Unknown Member key 0.
+    columns:
+      - name: date_key
+        tests: [not_null, unique]
+      - name: full_date
+        tests: [unique]
+
+  - name: dim_delivery_condition
+    description: Junk dimension at one normalized Weather–Traffic combination.
+    columns:
+      - name: delivery_condition_key
+        tests: [not_null, unique]
+      - name: weather_name
+        tests: [not_null]
+      - name: traffic_level
+        tests: [not_null]
+
+  - name: dim_vehicle
+    description: Type 1 vehicle dimension with Unknown Member key 0.
+    columns:
+      - name: vehicle_key
+        tests: [not_null, unique]
+      - name: vehicle_type
+        tests: [not_null, unique]
+
+  - name: dim_area
+    description: Type 1 normalized area dimension with Unknown Member key 0.
+    columns:
+      - name: area_key
+        tests: [not_null, unique]
+      - name: area_name
+        tests: [not_null, unique]
+
+  - name: dim_category
+    description: Type 1 category dimension with Unknown Member key 0.
+    columns:
+      - name: category_key
+        tests: [not_null, unique]
+      - name: category_name
+        tests: [not_null, unique]
+
+  - name: fact_delivery
+    description: >
+      One valid source delivery record per order_id, with five Dimension foreign
+      keys and 31 logical Data Contract fields. Repeated order_id resolution
+      across future batches remains pending LOAD-01.
+    columns:
+      - name: delivery_key
+        tests: [not_null, unique]
+      - name: order_id
+        tests: [not_null, unique]
+      - name: date_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: delivery_condition_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_delivery_condition')
+                field: delivery_condition_key
+      - name: vehicle_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_vehicle')
+                field: vehicle_key
+      - name: area_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_area')
+                field: area_key
+      - name: category_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_category')
+                field: category_key
+      - name: source_file_name
+        tests: [not_null]
+      - name: load_batch_id
+        tests: [not_null]
+      - name: loaded_at
+        tests: [not_null]

@@ -1,0 +1,23 @@
+name: amazon_delivery_bi
+version: "1.0.0"
+config-version: 2
+
+profile: amazon_delivery_bi
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  amazon_delivery_bi:
+    +persist_docs:
+      relation: true
+      columns: true
