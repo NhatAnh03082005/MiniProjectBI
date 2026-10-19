@@ -12,7 +12,9 @@ secrets*.json
 venv/
 env/
 __pycache__/
+*.pyc
 *.py[cod]
+.ipynb_checkpoints/
 .pytest_cache/
 .mypy_cache/
 
@@ -30,6 +32,8 @@ temp/
 # Mage runtime and temporary artifacts
 03_mage/.file_versions/
 03_mage/.preferences.yaml
+03_mage/.mage_data/
+03_mage/.ssh_tunnel/
 03_mage/**/.cache/
 03_mage/**/tmp/
 
