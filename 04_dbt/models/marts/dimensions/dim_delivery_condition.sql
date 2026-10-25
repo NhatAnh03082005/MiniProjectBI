@@ -1,6 +1,8 @@
+-- depends_on: {{ ref('int_delivery_enriched') }}
+
 {{ config(
     materialized='table',
-    pre_hook=ensure_delivery_condition_key_map(ref('int_delivery_enriched'))
+    pre_hook="{{ ensure_delivery_condition_key_map('int_delivery_enriched') }}"
 ) }}
 
 select

@@ -1,4 +1,10 @@
-{% macro ensure_single_value_key_map(map_table, key_column, natural_column, natural_type, source_relation) %}
+{% macro ensure_single_value_key_map(
+    map_table,
+    key_column,
+    natural_column,
+    natural_type,
+    source_model
+) %}
     if object_id(N'{{ map_table }}', N'U') is null
     begin
         create table {{ map_table }} (
@@ -13,14 +19,14 @@
     merge {{ map_table }} as target
     using (
         select distinct coalesce({{ natural_column }}, N'Unknown') as {{ natural_column }}
-        from {{ source_relation }}
+        from {{ ref(source_model) }}
     ) as source
         on target.{{ natural_column }} = source.{{ natural_column }}
     when not matched by target then
         insert ({{ natural_column }}) values (source.{{ natural_column }});
 {% endmacro %}
 
-{% macro ensure_delivery_condition_key_map(source_relation) %}
+{% macro ensure_delivery_condition_key_map(source_model) %}
     if object_id(N'dw.dim_delivery_condition_key_map', N'U') is null
     begin
         create table dw.dim_delivery_condition_key_map (
@@ -40,7 +46,7 @@
         select distinct
             coalesce(weather_name, N'Unknown') as weather_name,
             coalesce(traffic_level, N'Unknown') as traffic_level
-        from {{ source_relation }}
+        from {{ ref(source_model) }}
     ) as source
         on target.weather_name = source.weather_name
         and target.traffic_level = source.traffic_level

@@ -1,14 +1,42 @@
 {{ config(materialized='table') }}
 
-with calendar as (
+with digits as (
 
-    select cast('2022-01-01' as date) as full_date
+    select digit
+    from (
+        values
+            (0), (1), (2), (3), (4),
+            (5), (6), (7), (8), (9)
+    ) as values_table(digit)
 
-    union all
+),
 
-    select dateadd(day, 1, full_date)
-    from calendar
-    where full_date < cast('2022-12-31' as date)
+numbers as (
+
+    select
+        ones.digit
+        + tens.digit * 10
+        + hundreds.digit * 100 as day_number
+    from digits as ones
+    cross join digits as tens
+    cross join digits as hundreds
+
+),
+
+calendar as (
+
+    select
+        dateadd(
+            day,
+            day_number,
+            cast('2022-01-01' as date)
+        ) as full_date
+    from numbers
+    where day_number <= datediff(
+        day,
+        cast('2022-01-01' as date),
+        cast('2022-12-31' as date)
+    )
 
 ),
 
@@ -63,5 +91,3 @@ select
     quarter_number,
     year
 from calendar_attributes
-
-option (maxrecursion 366)

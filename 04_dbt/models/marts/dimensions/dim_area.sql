@@ -1,12 +1,14 @@
+-- depends_on: {{ ref('int_delivery_enriched') }}
+
 {{ config(
     materialized='table',
-    pre_hook=ensure_single_value_key_map(
+    pre_hook="{{ ensure_single_value_key_map(
         'dw.dim_area_key_map',
         'area_key',
         'area_name',
         'nvarchar(64)',
-        ref('int_delivery_enriched')
-    )
+        'int_delivery_enriched'
+    ) }}"
 ) }}
 
 select
