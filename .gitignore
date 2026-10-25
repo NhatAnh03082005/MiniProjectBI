@@ -25,17 +25,17 @@ tmp/
 temp/
 
 # dbt generated artifacts
-04_dbt/target/
-04_dbt/logs/
-04_dbt/dbt_packages/
+dbt_project/target/
+dbt_project/logs/
+dbt_project/dbt_packages/
 
 # Mage runtime and temporary artifacts
-03_mage/.file_versions/
-03_mage/.preferences.yaml
-03_mage/.mage_data/
-03_mage/.ssh_tunnel/
-03_mage/**/.cache/
-03_mage/**/tmp/
+mage_project/.file_versions/
+mage_project/.preferences.yaml
+mage_project/.mage_data/
+mage_project/.ssh_tunnel/
+mage_project/**/.cache/
+mage_project/**/tmp/
 
 # IDE and OS files
 .vscode/
@@ -45,6 +45,6 @@ Thumbs.db
 Desktop.ini
 
 # Temporary or large recordings
-09_demo/recordings/*.tmp
-09_demo/recordings/*.part
-09_demo/recordings/*_draft.mp4
+demo/recordings/*.tmp
+demo/recordings/*.part
+demo/recordings/*_draft.mp4

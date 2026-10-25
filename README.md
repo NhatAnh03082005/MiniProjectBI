@@ -18,14 +18,14 @@ Xây dựng hệ thống Business Intelligence tích hợp Generative AI để p
 
 ## Tài liệu hiện hành
 
-- [Dataset Selection](00_project_management/DATASET_SELECTION.md)
-- [Data Profile](00_project_management/DATA_PROFILE_AMAZON_DELIVERY.md)
-- [Business Requirements](00_project_management/BUSINESS_REQUIREMENTS.md)
-- [KPI Dictionary](00_project_management/KPI_DICTIONARY.md)
-- [Approved Dimensional Model](00_project_management/DIMENSIONAL_MODEL.md)
-- [Team Handoff Guide](00_project_management/TEAM_HANDOFF_GUIDE.md)
-- [Task Board](00_project_management/TASK_BOARD.md)
-- [Decision Log](00_project_management/DECISION_LOG.md)
+- [Dataset Selection](project_management/DATASET_SELECTION.md)
+- [Data Profile](project_management/DATA_PROFILE_AMAZON_DELIVERY.md)
+- [Business Requirements](project_management/BUSINESS_REQUIREMENTS.md)
+- [KPI Dictionary](project_management/KPI_DICTIONARY.md)
+- [Approved Dimensional Model](project_management/DIMENSIONAL_MODEL.md)
+- [Team Handoff Guide](project_management/TEAM_HANDOFF_GUIDE.md)
+- [Task Board](project_management/TASK_BOARD.md)
+- [Decision Log](project_management/DECISION_LOG.md)
 
 ## Business Baseline
 
@@ -55,14 +55,14 @@ Task tiếp theo là `MOD-02` — vẽ và đặc tả Star Schema dựa trên l
 
 ## Cấu trúc thư mục
 
-- `00_project_management`: tài liệu quản lý và quyết định.
-- `01_data`: dữ liệu raw, full load, incremental và rejected.
-- `02_sql`: script database, staging, warehouse và audit.
-- `03_mage`: mã nguồn và kiểm thử Mage.ai.
-- `04_dbt`: models, tests, macros, seeds và snapshots dbt.
-- `05_powerbi`: PBIX, DAX, mockup và theme.
-- `06_ai`: mã nguồn, prompt, test và input mẫu cho AI.
-- `07_report`: nội dung, hình và tài liệu tham khảo của báo cáo.
-- `08_evidence`: bằng chứng kiểm thử theo từng thành phần.
-- `09_demo`: kịch bản và bản ghi demo.
+- `project_management`: tài liệu quản lý và quyết định.
+- `data`: dữ liệu raw, full load, incremental và rejected.
+- `sql`: script database, staging, warehouse và audit.
+- `mage_project`: mã nguồn và kiểm thử Mage.ai.
+- `dbt_project`: models, tests, macros, seeds và snapshots dbt.
+- `powerbi`: PBIX, DAX, mockup và theme.
+- `ai`: mã nguồn, prompt, test và input mẫu cho AI.
+- `report`: nội dung, hình và tài liệu tham khảo của báo cáo.
+- `evidence`: bằng chứng kiểm thử theo từng thành phần.
+- `demo`: kịch bản và bản ghi demo.
 - `config`: ví dụ cấu hình không chứa bí mật.

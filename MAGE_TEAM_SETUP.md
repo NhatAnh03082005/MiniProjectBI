@@ -5,7 +5,7 @@
 - Python 3.11.
 - SQL Server và SQL Server Management Studio (SSMS).
 - Microsoft ODBC Driver 18 for SQL Server.
-- Repository đầy đủ, đặc biệt là `01_data/`, `02_sql/` và `03_mage/`.
+- Repository đầy đủ, đặc biệt là `data/`, `sql/` và `mage_project/`.
 
 ## 2. Tạo môi trường Python
 
@@ -22,23 +22,21 @@ python -m pip install mage-ai==0.9.80 pyodbc pandas
 
 ## 3. Khởi tạo SQL skeleton
 
-Trong SSMS, kết nối đúng SQL Server instance, mở `02_sql/run_sql_skeleton.sql` và chọn **Execute** một lần. Kiểm tra phần Messages và các result set validation ở cuối file.
+Trong SSMS, kết nối đúng SQL Server instance, mở `sql/run_sql_skeleton.sql` và chọn **Execute** một lần. Kiểm tra phần Messages và các result set validation ở cuối file.
 
-## 4. Tạo junction cục bộ cho Mage
+## 4. Xác nhận Mage project
 
-Mage nên chạy qua một junction ngắn trỏ vào `03_mage`. Junction chỉ tồn tại trên máy cá nhân và không được đưa vào repository.
+Mage project dùng trực tiếp thư mục `mage_project` trong repository. Không tạo junction, symlink hoặc thư mục trung gian.
 
 ```powershell
-$ProjectRoot = (Resolve-Path "D:\duong-dan-mau\BI_AI_Project").Path
-$MageAliasParent = Join-Path $env:USERPROFILE "MageProjects"
-$MageAlias = Join-Path $MageAliasParent "MageAmazonDelivery"
-$MageTarget = Join-Path $ProjectRoot "03_mage"
+$ProjectRoot = (Resolve-Path ".").Path
+$MageProject = Join-Path $ProjectRoot "mage_project"
 
-New-Item -ItemType Directory -Force -Path $MageAliasParent | Out-Null
-New-Item -ItemType Junction -Path $MageAlias -Target $MageTarget
+Test-Path (Join-Path $MageProject "metadata.yaml")
+Test-Path (Join-Path $MageProject "pipelines\test_sql_server_connection\metadata.yaml")
 ```
 
-Nếu `$MageAlias` đã tồn tại, phải kiểm tra target trước; không xóa hoặc ghi đè junction không rõ nguồn gốc.
+Hai lệnh kiểm tra phải trả về `True`.
 
 ## 5. Đặt biến môi trường
 
@@ -56,7 +54,8 @@ Không ghi password hoặc credential vào Python, YAML hay Git.
 ## 6. Khởi động và chạy pipeline
 
 ```powershell
-mage start $MageAlias
+Set-Location $ProjectRoot
+mage start mage_project
 ```
 
 Trong Mage UI, chạy theo thứ tự:
@@ -64,7 +63,7 @@ Trong Mage UI, chạy theo thứ tự:
 1. `test_sql_server_connection`.
 2. `amazon_delivery_full_load`.
 
-Không chạy trực tiếp `03_mage/data_loaders/full_load_amazon_delivery.py`. File này là Mage block và phụ thuộc decorator/runtime của Mage.
+Không chạy trực tiếp `mage_project/data_loaders/full_load_amazon_delivery.py`. File này là Mage block và phụ thuộc decorator/runtime của Mage.
 
 Kết quả mong đợi:
 
@@ -75,21 +74,21 @@ Kết quả mong đợi:
 
 Nên commit:
 
-- `03_mage/metadata.yaml`.
-- `03_mage/data_loaders/*.py`.
-- `03_mage/pipelines/*/metadata.yaml` và `__init__.py`.
+- `mage_project/metadata.yaml`.
+- `mage_project/data_loaders/*.py`.
+- `mage_project/pipelines/*/metadata.yaml` và `__init__.py`.
 - `MAGE_TEAM_SETUP.md` và các tài liệu liên quan.
 
 Không commit:
 
 - `.venv/`, `__pycache__/`, `*.pyc`, `.ipynb_checkpoints/`.
-- `03_mage/.mage_data/`, `03_mage/.ssh_tunnel/`, log và output tạm.
-- Junction `MageAmazonDelivery` hoặc đường dẫn cá nhân.
+- `mage_project/.mage_data/`, `mage_project/.ssh_tunnel/`, log và output tạm.
+- Junction, symlink, thư mục trung gian hoặc đường dẫn cá nhân.
 - `.env`, password, connection string chứa credential.
 
 ## 8. Checklist trước khi bàn giao cho dbt
 
-- [ ] `02_sql/run_sql_skeleton.sql` chạy thành công trên đúng instance.
+- [ ] `sql/run_sql_skeleton.sql` chạy thành công trên đúng instance.
 - [ ] Pipeline connection xác nhận database, schema và hai bảng tồn tại.
 - [ ] Full Load trả `SUCCEEDED` và staging có 43.739 dòng.
 - [ ] Chạy lại trả `SKIPPED` và không tăng row count.
