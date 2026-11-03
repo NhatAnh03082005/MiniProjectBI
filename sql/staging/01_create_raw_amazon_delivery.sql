@@ -16,6 +16,15 @@ Important:
 USE AmazonDeliveryBI;
 GO
 
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET ARITHABORT ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET NUMERIC_ROUNDABORT OFF;
+GO
+
 IF OBJECT_ID(
     N'staging.raw_amazon_delivery',
     N'U'
@@ -58,20 +67,38 @@ BEGIN
             REFERENCES audit.load_batch (load_batch_id)
     );
 
-    CREATE INDEX IX_raw_amazon_delivery_load_batch_id
-        ON staging.raw_amazon_delivery (load_batch_id);
-
-    CREATE UNIQUE INDEX UX_raw_amazon_delivery_batch_source_row
-        ON staging.raw_amazon_delivery (load_batch_id, source_row_number);
-
-    CREATE UNIQUE INDEX UX_raw_amazon_delivery_order_id
-        ON staging.raw_amazon_delivery (Order_ID)
-        WHERE Order_ID IS NOT NULL;
-
     PRINT N'Đã tạo staging.raw_amazon_delivery.';
 END
 ELSE
 BEGIN
     PRINT N'Bảng staging.raw_amazon_delivery đã tồn tại.';
 END;
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'staging.raw_amazon_delivery')
+      AND name = N'IX_raw_amazon_delivery_load_batch_id'
+)
+    CREATE INDEX IX_raw_amazon_delivery_load_batch_id
+        ON staging.raw_amazon_delivery (load_batch_id);
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'staging.raw_amazon_delivery')
+      AND name = N'UX_raw_amazon_delivery_batch_source_row'
+)
+    CREATE UNIQUE INDEX UX_raw_amazon_delivery_batch_source_row
+        ON staging.raw_amazon_delivery (load_batch_id, source_row_number);
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'staging.raw_amazon_delivery')
+      AND name = N'UX_raw_amazon_delivery_order_id'
+)
+    CREATE UNIQUE INDEX UX_raw_amazon_delivery_order_id
+        ON staging.raw_amazon_delivery (Order_ID)
+        WHERE Order_ID IS NOT NULL;
 GO

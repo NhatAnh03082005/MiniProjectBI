@@ -36,5 +36,4 @@ spark_config: {}
 tags: []
 type: python
 uuid: test_sql_server_connection
-variables_dir: C:\Users\PC\.mage_data\mage_project
 widgets: []
