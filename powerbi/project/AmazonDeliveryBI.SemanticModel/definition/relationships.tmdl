@@ -1,0 +1,30 @@
+relationship 687fc5ba-6515-420d-9d6f-34cbf8f6b985
+	joinOnDateBehavior: datePartOnly
+	fromColumn: dim_date.full_date
+	toColumn: LocalDateTable_ae4a27a4-4e0c-4cee-9e1f-8d0c4a2228fd.Date
+
+relationship 821fafb2-2f5a-41c5-b810-87266b092874
+	joinOnDateBehavior: datePartOnly
+	fromColumn: fact_delivery.loaded_at
+	toColumn: LocalDateTable_ff7c3ab3-b08c-408c-8e42-5bd430935aa3.Date
+
+relationship AutoDetected_8f325422-1d06-47d5-af11-93100f3f8335
+	fromColumn: fact_delivery.area_key
+	toColumn: dim_area.area_key
+
+relationship AutoDetected_3992c791-731d-44ad-a6a8-b59ac7a8801f
+	fromColumn: fact_delivery.category_key
+	toColumn: dim_category.category_key
+
+relationship AutoDetected_7fa04303-40ec-4ece-b267-057a505632c0
+	fromColumn: fact_delivery.date_key
+	toColumn: dim_date.date_key
+
+relationship AutoDetected_46ead862-edc1-4043-b852-e6961291846f
+	fromColumn: fact_delivery.delivery_condition_key
+	toColumn: dim_delivery_condition.delivery_condition_key
+
+relationship AutoDetected_83766e4e-1b96-4b9b-9018-0cdc111c9302
+	fromColumn: fact_delivery.vehicle_key
+	toColumn: dim_vehicle.vehicle_key
+

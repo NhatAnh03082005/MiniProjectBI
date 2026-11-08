@@ -1,0 +1,164 @@
+table dim_date
+	lineageTag: 5ce718e4-996e-4b06-95bd-5de7b2368f8b
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 003ea3f0-4693-4cda-b494-834dc9c5e352
+		summarizeBy: none
+		sourceColumn: date_key
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column full_date
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: a7f2fdd1-de27-4167-847f-a0fd75c8fb87
+		summarizeBy: none
+		sourceColumn: full_date
+
+		variation Variation
+			isDefault
+			relationship: 687fc5ba-6515-420d-9d6f-34cbf8f6b985
+			defaultHierarchy: LocalDateTable_ae4a27a4-4e0c-4cee-9e1f-8d0c4a2228fd.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column day_of_month
+		dataType: int64
+		formatString: 0
+		lineageTag: aaa2c493-223d-4db6-a865-5b8bb80ccefd
+		summarizeBy: sum
+		sourceColumn: day_of_month
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column day_name
+		dataType: string
+		lineageTag: 8baa628c-f79a-414a-9e9c-16e9ffd21ffa
+		summarizeBy: none
+		sourceColumn: day_name
+		sortByColumn: day_of_week_number
+
+		changedProperty = SortByColumn
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column day_of_week_number
+		dataType: int64
+		formatString: 0
+		lineageTag: a8667697-d0d0-44e0-8ae4-39c0e781209a
+		summarizeBy: sum
+		sourceColumn: day_of_week_number
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column week_of_year
+		dataType: int64
+		formatString: 0
+		lineageTag: f1d58ea8-3ccd-46fd-94b4-2d2fd4c403af
+		summarizeBy: sum
+		sourceColumn: week_of_year
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column month_number
+		dataType: int64
+		formatString: 0
+		lineageTag: 376f73dd-2cc5-4ee5-8239-7c29c9fc08bb
+		summarizeBy: sum
+		sourceColumn: month_number
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column month_name
+		dataType: string
+		lineageTag: eb3c3f71-9a5e-449a-8ad3-00102e5da45a
+		summarizeBy: none
+		sourceColumn: month_name
+		sortByColumn: month_number
+
+		changedProperty = SortByColumn
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column quarter_number
+		dataType: int64
+		formatString: 0
+		lineageTag: 9f8d501e-176a-4e3c-b8e1-2e605bb59fbd
+		summarizeBy: sum
+		sourceColumn: quarter_number
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column year
+		dataType: int64
+		formatString: 0
+		lineageTag: 287fe657-a568-4f23-882a-56d05bc873e7
+		summarizeBy: sum
+		sourceColumn: year
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	hierarchy 'Date Hierarchy'
+		lineageTag: 9c320a79-a98e-4bba-9723-193d5c879f3d
+
+		level year
+			lineageTag: e1ef1362-61bb-487a-a012-a4974384591f
+			column: year
+
+		level quarter_number
+			lineageTag: 45099159-3923-401a-b820-474bc3bf8fe3
+			column: quarter_number
+
+		level month_name
+			lineageTag: 542f233d-7c38-4ec5-a90a-c8eb1b25b571
+			column: month_name
+
+		level full_date
+			lineageTag: 278310fc-aa6e-4e26-aadb-ffbe6a633b24
+			column: full_date
+
+		changedProperty = IsHidden
+
+	partition dim_date = m
+		mode: import
+		source =
+				let
+				  Source = Sql.Database("NHAT-ANH\SQLEXPRESS", "AmazonDeliveryBI"),
+				  #"Navigation 1" = Source{[Schema = "dw", Item = "dim_date"]}[Data],
+				    #"Filtered Rows" = Table.SelectRows(#"Navigation 1", each ([date_key] <> 0))
+				in
+				  #"Filtered Rows"
+
+	changedProperty = Name
+
+	changedProperty = IsHidden
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

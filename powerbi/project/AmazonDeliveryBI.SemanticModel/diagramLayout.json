@@ -1,0 +1,108 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 152.38095238095238,
+        "y": 276.1904761904762
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 634.36568539704376,
+            "y": 183.52375959586567
+          },
+          "nodeIndex": "dim_area",
+          "size": {
+            "height": 167.28571428571428,
+            "width": 234
+          },
+          "zIndex": 1
+        },
+        {
+          "location": {
+            "x": 165.436475976177,
+            "y": 186.65221432884096
+          },
+          "nodeIndex": "dim_category",
+          "size": {
+            "height": 128,
+            "width": 234
+          },
+          "zIndex": 2
+        },
+        {
+          "location": {
+            "x": 728.98595285449119,
+            "y": 612.3650627224315
+          },
+          "nodeIndex": "dim_date",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 5
+        },
+        {
+          "location": {
+            "x": 310.89812142386074,
+            "y": 804.52496727086179
+          },
+          "nodeIndex": "dim_delivery_condition",
+          "size": {
+            "height": 152,
+            "width": 290
+          },
+          "zIndex": 4
+        },
+        {
+          "location": {
+            "x": 0,
+            "y": 637.630909758468
+          },
+          "nodeIndex": "dim_vehicle",
+          "size": {
+            "height": 128,
+            "width": 234
+          },
+          "zIndex": 3
+        },
+        {
+          "location": {
+            "x": 339.42211773670664,
+            "y": 375.59457134915351
+          },
+          "nodeIndex": "fact_delivery",
+          "nodeLineageTag": "b89ae036-337b-43fb-8776-4a1975405caa",
+          "size": {
+            "height": 300,
+            "width": 236.38095238095252
+          },
+          "zIndex": 6
+        },
+        {
+          "location": {
+            "x": 1012.9859528544912,
+            "y": 347.67519036945328
+          },
+          "nodeIndex": "_Measures",
+          "nodeLineageTag": "e17a1649-1210-4383-906a-372772d01c4d",
+          "size": {
+            "height": 339.28571428571445,
+            "width": 234
+          },
+          "zIndex": 7
+        }
+      ],
+      "name": "All tables",
+      "zoomValue": 84,
+      "pinKeyFieldsToTop": false,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ],
+  "selectedDiagram": "All tables",
+  "defaultDiagram": "All tables"
+}

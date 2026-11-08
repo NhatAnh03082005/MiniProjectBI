@@ -45,6 +45,12 @@ mage_project/**/tmp/
 Thumbs.db
 Desktop.ini
 
+# Power BI Desktop project local/cache files
+**/.pbi/localSettings.json
+**/.pbi/cache.abf
+**/.pbi/unappliedChanges.json
+**/.pbi/editorSettings.json
+
 # Temporary or large recordings
 demo/recordings/*.tmp
 demo/recordings/*.part

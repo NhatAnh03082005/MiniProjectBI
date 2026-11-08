@@ -1,0 +1,42 @@
+table dim_area
+	lineageTag: c358605f-5a62-4023-b3d6-877a00b7a16d
+
+	column area_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 18b6ad4c-b6c7-44ae-8bec-23661251db62
+		summarizeBy: none
+		sourceColumn: area_key
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_name
+		dataType: string
+		lineageTag: cfdebbea-27e7-4d1c-8b49-6ec7c6505ae0
+		summarizeBy: none
+		sourceColumn: area_name
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_area = m
+		mode: import
+		source =
+				let
+				  Source = Sql.Database("NHAT-ANH\SQLEXPRESS", "AmazonDeliveryBI"),
+				  #"Navigation 1" = Source{[Schema = "dw", Item = "dim_area"]}[Data]
+				in
+				  #"Navigation 1"
+
+	changedProperty = Name
+
+	changedProperty = IsHidden
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

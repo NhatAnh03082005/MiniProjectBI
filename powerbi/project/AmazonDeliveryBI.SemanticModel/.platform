@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "AmazonDeliveryBI"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "fe576fc6-1c2b-4961-9b3c-a88accc25133"
+  }
+}

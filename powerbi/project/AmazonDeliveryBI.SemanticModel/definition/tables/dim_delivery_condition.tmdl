@@ -1,0 +1,48 @@
+table dim_delivery_condition
+	lineageTag: def64f2b-f9f3-4ea9-98a4-85b43e1bd293
+
+	column delivery_condition_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: ca84f346-5cfc-4aa3-a85b-791bec13b299
+		summarizeBy: none
+		sourceColumn: delivery_condition_key
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column weather_name
+		dataType: string
+		lineageTag: 5f976a4f-43b9-422c-9f0a-8cf98003f259
+		summarizeBy: none
+		sourceColumn: weather_name
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column traffic_level
+		dataType: string
+		lineageTag: f4845095-048b-4273-a38c-9131e2887cc0
+		summarizeBy: none
+		sourceColumn: traffic_level
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_delivery_condition = m
+		mode: import
+		source =
+				let
+				  Source = Sql.Database("NHAT-ANH\SQLEXPRESS", "AmazonDeliveryBI"),
+				  #"Navigation 1" = Source{[Schema = "dw", Item = "dim_delivery_condition"]}[Data]
+				in
+				  #"Navigation 1"
+
+	changedProperty = IsHidden
+
+	changedProperty = Name
+

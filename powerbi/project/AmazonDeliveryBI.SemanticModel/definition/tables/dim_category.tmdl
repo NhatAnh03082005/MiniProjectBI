@@ -1,0 +1,38 @@
+table dim_category
+	lineageTag: 0a949cf2-cc2b-4ce3-8f8a-5fbf8f70649e
+
+	column category_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 67646c6b-ee6d-4ef7-80a6-91c84f2e65ca
+		summarizeBy: none
+		sourceColumn: category_key
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column category_name
+		dataType: string
+		lineageTag: 76289f8c-1648-480a-a533-801169201ed4
+		summarizeBy: none
+		sourceColumn: category_name
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_category = m
+		mode: import
+		source =
+				let
+				  Source = Sql.Database("NHAT-ANH\SQLEXPRESS", "AmazonDeliveryBI"),
+				  #"Navigation 1" = Source{[Schema = "dw", Item = "dim_category"]}[Data]
+				in
+				  #"Navigation 1"
+
+	changedProperty = Name
+
+	changedProperty = IsHidden
+

@@ -1,0 +1,376 @@
+table fact_delivery
+	lineageTag: b89ae036-337b-43fb-8776-4a1975405caa
+
+	column delivery_key
+		dataType: string
+		isHidden
+		lineageTag: 836c8c58-4df9-4f30-beb1-8663e9428f3a
+		summarizeBy: none
+		sourceColumn: delivery_key
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column order_id
+		dataType: string
+		lineageTag: 9eb3ea68-8ac4-4268-b33a-ec083bc39579
+		summarizeBy: none
+		sourceColumn: order_id
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 665e59e6-dfce-4d52-885f-8b011fc18c7c
+		summarizeBy: none
+		sourceColumn: date_key
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column delivery_condition_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: bc0917b4-a8ca-427e-84ed-2ad2377433fd
+		summarizeBy: none
+		sourceColumn: delivery_condition_key
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column vehicle_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: b3cf8f59-d5a7-4f49-9045-4ed4e6c913cb
+		summarizeBy: none
+		sourceColumn: vehicle_key
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 7091dfbc-b4af-4e98-93a2-0b60c409a06d
+		summarizeBy: none
+		sourceColumn: area_key
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column category_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 93ea45fb-22ce-49e4-ad14-19e61a5ab8df
+		summarizeBy: none
+		sourceColumn: category_key
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column order_time
+		dataType: dateTime
+		formatString: Long Time
+		lineageTag: 448947b6-ac2a-4957-92ab-3a2986e5a939
+		summarizeBy: none
+		sourceColumn: order_time
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Time
+
+	column pickup_time
+		dataType: dateTime
+		formatString: Long Time
+		lineageTag: 81cc0043-31e0-461b-8eb3-abb4d9bb60a3
+		summarizeBy: none
+		sourceColumn: pickup_time
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Time
+
+	column order_hour
+		dataType: int64
+		formatString: 0
+		lineageTag: e53c70a6-896e-49bc-9595-85bd67beed84
+		summarizeBy: sum
+		sourceColumn: order_hour
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column time_period
+		dataType: string
+		lineageTag: 63931ece-a0c7-473d-9936-a6043562da3e
+		summarizeBy: none
+		sourceColumn: time_period
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column agent_age
+		dataType: int64
+		formatString: 0
+		lineageTag: a181bda8-7ac4-484f-99bb-fb8bc0e908b5
+		summarizeBy: sum
+		sourceColumn: agent_age
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column age_group
+		dataType: string
+		lineageTag: 86ec8203-e311-4457-bd72-05fdf1159fa5
+		summarizeBy: none
+		sourceColumn: age_group
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column underage_agent_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 61021f62-cd8b-4ebf-9ad7-177ac243fe98
+		summarizeBy: none
+		sourceColumn: underage_agent_flag
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column agent_rating_raw
+		dataType: double
+		lineageTag: 66edfe2f-5590-43da-995d-fb22a32320e1
+		summarizeBy: sum
+		sourceColumn: agent_rating_raw
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column agent_rating_valid
+		dataType: double
+		lineageTag: e4dc628d-0d77-49bb-b029-05bc57fc7050
+		summarizeBy: sum
+		sourceColumn: agent_rating_valid
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column rating_group
+		dataType: string
+		lineageTag: 2356542f-e47f-492a-a5d6-27c9f5852b13
+		summarizeBy: none
+		sourceColumn: rating_group
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column valid_rating_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 87d240ed-e529-4467-9c5b-305126b7a1e5
+		summarizeBy: none
+		sourceColumn: valid_rating_flag
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column delivery_time_minutes
+		dataType: double
+		lineageTag: 081c0cef-ca9b-409b-895d-b482ca9bb5ba
+		summarizeBy: sum
+		sourceColumn: delivery_time_minutes
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column above_baseline_p90_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: ddc0fe8c-4f33-4e04-9c1d-2869157d3602
+		summarizeBy: none
+		sourceColumn: above_baseline_p90_flag
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column delivery_time_iqr_outlier_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: af9f291e-6360-4a06-a006-703ff17b03ff
+		summarizeBy: none
+		sourceColumn: delivery_time_iqr_outlier_flag
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column pickup_delay_minutes
+		dataType: double
+		lineageTag: 55c1bd0f-814f-451b-8cc2-c238e4ecbfb1
+		summarizeBy: sum
+		sourceColumn: pickup_delay_minutes
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column pickup_rollover_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 166668fb-08e9-407d-b31c-d78840d2dcc7
+		summarizeBy: none
+		sourceColumn: pickup_rollover_flag
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column delivery_distance_km
+		dataType: double
+		lineageTag: b5089d48-15a2-4f36-9319-47b34c4e0686
+		summarizeBy: sum
+		sourceColumn: delivery_distance_km
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column valid_distance_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 94e3ceed-a362-44f0-926b-fcf4c3b0803a
+		summarizeBy: none
+		sourceColumn: valid_distance_flag
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column distance_band
+		dataType: string
+		lineageTag: d8202ea2-3d3f-4a25-b2ac-cf3bbef3fc28
+		summarizeBy: none
+		sourceColumn: distance_band
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column delivery_count
+		dataType: int64
+		formatString: 0
+		lineageTag: 265edb62-4d01-4610-bfb5-f972a3dc7573
+		summarizeBy: sum
+		sourceColumn: delivery_count
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column missing_operational_context_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 25017906-eef4-4d5b-9280-793dfea2b8c1
+		summarizeBy: none
+		sourceColumn: missing_operational_context_flag
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_file_name
+		dataType: string
+		isHidden
+		lineageTag: 7f1ea59d-4067-4b14-b110-9f9e3109884f
+		summarizeBy: none
+		sourceColumn: source_file_name
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column load_batch_id
+		dataType: string
+		isHidden
+		lineageTag: aab6cd2b-1bb8-45ca-87c7-50c2edd6f4c0
+		summarizeBy: none
+		sourceColumn: load_batch_id
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column loaded_at
+		dataType: dateTime
+		isHidden
+		formatString: General Date
+		lineageTag: 80c4f062-54be-4baa-ac3a-67185b37d7e0
+		summarizeBy: none
+		sourceColumn: loaded_at
+
+		variation Variation
+			isDefault
+			relationship: 821fafb2-2f5a-41c5-b810-87266b092874
+			defaultHierarchy: LocalDateTable_ff7c3ab3-b08c-408c-8e42-5bd430935aa3.'Date Hierarchy'
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_delivery = m
+		mode: import
+		source =
+				let
+				  Source = Sql.Database("NHAT-ANH\SQLEXPRESS", "AmazonDeliveryBI"),
+				  #"Navigation 1" = Source{[Schema = "dw", Item = "fact_delivery"]}[Data]
+				in
+				  #"Navigation 1"
+
+	changedProperty = Name
+
+	changedProperty = IsHidden
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

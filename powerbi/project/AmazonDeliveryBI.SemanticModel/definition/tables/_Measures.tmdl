@@ -1,0 +1,129 @@
+table _Measures
+	lineageTag: e17a1649-1210-4383-906a-372772d01c4d
+
+	measure 'Total Delivery Records' = ```
+			SUM(fact_delivery[delivery_count]) 
+			```
+		formatString: #,0
+		lineageTag: cac482df-2eab-4ea2-8ce3-7886887048ae
+
+	measure 'Average Delivery Time' = AVERAGE( fact_delivery[delivery_time_minutes] )
+		formatString: 0.00
+		lineageTag: 72566dea-07eb-4932-9366-ffdf6e0c2dd9
+
+	measure 'Median Delivery Time' = MEDIAN(fact_delivery[delivery_time_minutes])
+		formatString: 0
+		lineageTag: 7c0fa716-806a-4254-9308-cc13067a7c82
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'P90 Delivery Time' =
+			
+			PERCENTILEX.INC(
+			    FILTER (
+			        fact_delivery,
+			        NOT ISBLANK ( fact_delivery[delivery_time_minutes] )
+			    ),
+			    fact_delivery[delivery_time_minutes],
+			    0.90
+			)
+		formatString: 0
+		lineageTag: 9ad68ba6-a1da-4fa9-aa54-7d0a82150e13
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Above Baseline P90 Count' =
+			
+			CALCULATE (
+			    [Valid Delivery Time Count],
+			    fact_delivery[above_baseline_p90_flag] = TRUE ()
+			)
+		formatString: #,0
+		lineageTag: 49c4bdf0-280f-42f4-a708-af55821f57a5
+
+	measure 'Share Above Baseline P90' =
+			
+			DIVIDE (
+			    [Above Baseline P90 Count],
+			    [Valid Delivery Time Count]
+			)
+		formatString: 0.00%;-0.00%;0.00%
+		lineageTag: c703def0-43c6-4e4d-a61b-ae0bb9e0b42c
+
+	measure 'Active Days' =
+			
+			CALCULATE(
+			    DISTINCTCOUNT ( fact_delivery[date_key] ),
+			    fact_delivery[date_key] <> 0
+			)
+		formatString: #,0
+		lineageTag: 903b21e6-a5d6-4411-ac24-30312cadc24d
+
+	measure 'Average Deliveries per Active Day' =
+			
+			DIVIDE(
+			    [Total Delivery Records],
+			    [Active Days]
+			)
+		formatString: #,0.00
+		lineageTag: dfa2a0e3-f2b4-4a7a-b426-dc4082325a42
+
+	measure 'P95 Delivery Time' =
+			
+			PERCENTILEX.INC (
+			    FILTER (
+			        fact_delivery,
+			        NOT ISBLANK ( fact_delivery[delivery_time_minutes] )
+			    ),
+			    fact_delivery[delivery_time_minutes],
+			    0.95
+			)
+		formatString: 0
+		lineageTag: 7565e4a3-1997-4fee-9bfd-0d67e051f020
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Valid Delivery Time Count' = COUNT ( fact_delivery[delivery_time_minutes] )
+		formatString: #,0
+		lineageTag: 589ea68c-2dee-4cbe-986d-808bb439f1a0
+
+	measure 'Average Pickup Delay' =
+			
+			AVERAGE ( fact_delivery[pickup_delay_minutes] )
+		formatString: 0.00
+		lineageTag: df0e2d7e-aceb-45a4-894d-3d4ece6e5010
+
+	measure 'Average Valid Delivery Distance' =
+			
+			CALCULATE (
+			    AVERAGE ( fact_delivery[delivery_distance_km] ),
+			    fact_delivery[valid_distance_flag] = TRUE ()
+			)
+		formatString: 0.00
+		lineageTag: bdd6536a-5ccb-4881-a3f2-0e8ee5c7bd6b
+
+	measure 'Average Valid Agent Rating' =
+			
+			CALCULATE (
+			    AVERAGE ( fact_delivery[agent_rating_valid] ),
+			    fact_delivery[valid_rating_flag] = TRUE ()
+			)
+		formatString: 0.00
+		lineageTag: d009313e-98d9-4d55-b53c-68e800bb7dc0
+
+	column Placeholder
+		isHidden
+		formatString: 0
+		lineageTag: ffff0c47-7874-494c-bdc5-e5dd6dd79979
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Placeholder]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition _Measures = calculated
+		mode: import
+		source = DATATABLE("Placeholder", INTEGER,{{1}})
+
+	annotation PBI_Id = b0185463374c4cea93f41bb356ddc09d
+

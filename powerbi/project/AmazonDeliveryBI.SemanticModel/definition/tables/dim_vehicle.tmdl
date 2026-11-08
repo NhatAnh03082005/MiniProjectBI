@@ -1,0 +1,37 @@
+table dim_vehicle
+	lineageTag: f3de4a2d-ea43-4d5d-8910-ab4e06ab2c3e
+
+	column vehicle_key
+		dataType: int64
+		formatString: 0
+		lineageTag: b381f344-d6a5-4d45-83e2-ac98ce03724a
+		summarizeBy: none
+		sourceColumn: vehicle_key
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column vehicle_type
+		dataType: string
+		lineageTag: 2501ece6-7dfd-4f89-914b-3458f6425078
+		summarizeBy: none
+		sourceColumn: vehicle_type
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_vehicle = m
+		mode: import
+		source =
+				let
+				  Source = Sql.Database("NHAT-ANH\SQLEXPRESS", "AmazonDeliveryBI"),
+				  #"Navigation 1" = Source{[Schema = "dw", Item = "dim_vehicle"]}[Data]
+				in
+				  #"Navigation 1"
+
+	changedProperty = Name
+
+	changedProperty = IsHidden
+

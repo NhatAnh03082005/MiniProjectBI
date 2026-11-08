@@ -1,0 +1,103 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.3.0/schema.json",
+  "themeCollection": {
+    "baseTheme": {
+      "name": "Fluent2-CY26SU08",
+      "reportVersionAtImport": {
+        "visual": "2.12.0",
+        "report": "3.4.0",
+        "page": "2.3.1"
+      },
+      "type": "SharedResources"
+    },
+    "customTheme": {
+      "name": "Delivery_BI_-_Navy_Teal25725502065424033.json",
+      "reportVersionAtImport": {
+        "visual": "2.12.0",
+        "report": "3.4.0",
+        "page": "2.3.1"
+      },
+      "type": "RegisteredResources"
+    }
+  },
+  "objects": {
+    "section": [
+      {
+        "properties": {
+          "verticalAlignment": {
+            "expr": {
+              "Literal": {
+                "Value": "'Top'"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "outspacePane": [
+      {
+        "properties": {
+          "expanded": {
+            "expr": {
+              "Literal": {
+                "Value": "false"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "resourcePackages": [
+    {
+      "name": "SharedResources",
+      "type": "SharedResources",
+      "items": [
+        {
+          "name": "Fluent2-CY26SU08",
+          "path": "BaseThemes/Fluent2-CY26SU08.json",
+          "type": "BaseTheme"
+        }
+      ]
+    },
+    {
+      "name": "RegisteredResources",
+      "type": "RegisteredResources",
+      "items": [
+        {
+          "name": "Amazon_Delivery_Analytics_Dash18829551158090307.png",
+          "path": "Amazon_Delivery_Analytics_Dash18829551158090307.png",
+          "type": "Image"
+        },
+        {
+          "name": "Amazon_Delivery_Analytics_Dash35320918897173426.png",
+          "path": "Amazon_Delivery_Analytics_Dash35320918897173426.png",
+          "type": "Image"
+        },
+        {
+          "name": "Amazon_Delivery_Analytics_Dash47996445541443666.png",
+          "path": "Amazon_Delivery_Analytics_Dash47996445541443666.png",
+          "type": "Image"
+        },
+        {
+          "name": "Amazon_Delivery_Analytics_Dash6339112479387476.png",
+          "path": "Amazon_Delivery_Analytics_Dash6339112479387476.png",
+          "type": "Image"
+        },
+        {
+          "name": "Delivery_BI_-_Navy_Teal25725502065424033.json",
+          "path": "Delivery_BI_-_Navy_Teal25725502065424033.json",
+          "type": "CustomTheme"
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "useStylableVisualContainerHeader": true,
+    "exportDataMode": "AllowSummarized",
+    "defaultDrillFilterOtherVisuals": true,
+    "allowChangeFilterTypes": true,
+    "useEnhancedTooltips": true,
+    "useDefaultAggregateDisplayName": true
+  }
+}
