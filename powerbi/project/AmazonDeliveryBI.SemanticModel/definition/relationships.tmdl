@@ -1,13 +1,3 @@
-relationship 687fc5ba-6515-420d-9d6f-34cbf8f6b985
-	joinOnDateBehavior: datePartOnly
-	fromColumn: dim_date.full_date
-	toColumn: LocalDateTable_ae4a27a4-4e0c-4cee-9e1f-8d0c4a2228fd.Date
-
-relationship 821fafb2-2f5a-41c5-b810-87266b092874
-	joinOnDateBehavior: datePartOnly
-	fromColumn: fact_delivery.loaded_at
-	toColumn: LocalDateTable_ff7c3ab3-b08c-408c-8e42-5bd430935aa3.Date
-
 relationship AutoDetected_8f325422-1d06-47d5-af11-93100f3f8335
 	fromColumn: fact_delivery.area_key
 	toColumn: dim_area.area_key

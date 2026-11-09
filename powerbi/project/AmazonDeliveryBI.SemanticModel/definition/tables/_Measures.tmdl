@@ -8,14 +8,16 @@ table _Measures
 		lineageTag: cac482df-2eab-4ea2-8ce3-7886887048ae
 
 	measure 'Average Delivery Time' = AVERAGE( fact_delivery[delivery_time_minutes] )
-		formatString: 0.00
+		formatString: #,##0.00 "min"
 		lineageTag: 72566dea-07eb-4932-9366-ffdf6e0c2dd9
 
+		annotation PBI_FormatHint = {"isCustom":true}
+
 	measure 'Median Delivery Time' = MEDIAN(fact_delivery[delivery_time_minutes])
-		formatString: 0
+		formatString: #,##0 "min"
 		lineageTag: 7c0fa716-806a-4254-9308-cc13067a7c82
 
-		annotation PBI_FormatHint = {"isDecimal":true}
+		annotation PBI_FormatHint = {"isCustom":true}
 
 	measure 'P90 Delivery Time' =
 			
@@ -27,10 +29,10 @@ table _Measures
 			    fact_delivery[delivery_time_minutes],
 			    0.90
 			)
-		formatString: 0
+		formatString: #,##0 "min"
 		lineageTag: 9ad68ba6-a1da-4fa9-aa54-7d0a82150e13
 
-		annotation PBI_FormatHint = {"isDecimal":true}
+		annotation PBI_FormatHint = {"isCustom":true}
 
 	measure 'Above Baseline P90 Count' =
 			
@@ -78,10 +80,10 @@ table _Measures
 			    fact_delivery[delivery_time_minutes],
 			    0.95
 			)
-		formatString: 0
+		formatString: #,##0 "min"
 		lineageTag: 7565e4a3-1997-4fee-9bfd-0d67e051f020
 
-		annotation PBI_FormatHint = {"isDecimal":true}
+		annotation PBI_FormatHint = {"isCustom":true}
 
 	measure 'Valid Delivery Time Count' = COUNT ( fact_delivery[delivery_time_minutes] )
 		formatString: #,0
@@ -90,8 +92,10 @@ table _Measures
 	measure 'Average Pickup Delay' =
 			
 			AVERAGE ( fact_delivery[pickup_delay_minutes] )
-		formatString: 0.00
+		formatString: #,##0.00 "min"
 		lineageTag: df0e2d7e-aceb-45a4-894d-3d4ece6e5010
+
+		annotation PBI_FormatHint = {"isCustom":true}
 
 	measure 'Average Valid Delivery Distance' =
 			

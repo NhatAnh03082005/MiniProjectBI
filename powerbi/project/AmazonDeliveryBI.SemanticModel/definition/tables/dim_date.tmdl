@@ -15,21 +15,18 @@ table dim_date
 
 	column full_date
 		dataType: dateTime
-		formatString: Long Date
+		formatString: dd MMM
 		lineageTag: a7f2fdd1-de27-4167-847f-a0fd75c8fb87
 		summarizeBy: none
 		sourceColumn: full_date
-
-		variation Variation
-			isDefault
-			relationship: 687fc5ba-6515-420d-9d6f-34cbf8f6b985
-			defaultHierarchy: LocalDateTable_ae4a27a4-4e0c-4cee-9e1f-8d0c4a2228fd.'Date Hierarchy'
 
 		changedProperty = IsHidden
 
 		annotation SummarizationSetBy = Automatic
 
 		annotation UnderlyingDateTimeDataType = Date
+
+		annotation PBI_FormatHint = {"isCustom":true}
 
 	column day_of_month
 		dataType: int64

@@ -348,11 +348,6 @@ table fact_delivery
 		summarizeBy: none
 		sourceColumn: loaded_at
 
-		variation Variation
-			isDefault
-			relationship: 821fafb2-2f5a-41c5-b810-87266b092874
-			defaultHierarchy: LocalDateTable_ff7c3ab3-b08c-408c-8e42-5bd430935aa3.'Date Hierarchy'
-
 		changedProperty = IsHidden
 
 		annotation SummarizationSetBy = Automatic
