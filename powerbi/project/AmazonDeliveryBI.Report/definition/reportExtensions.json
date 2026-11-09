@@ -1,0 +1,128 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/reportExtension/1.0.0/schema.json",
+  "name": "extension",
+  "entities": [
+    {
+      "name": "_Measures",
+      "measures": [
+        {
+          "name": "Area Record Share",
+          "dataType": "Double",
+          "expression": "DIVIDE([Total Delivery Records], CALCULATE([Total Delivery Records], ALLSELECTED(dim_area[area_name])))",
+          "description": "Records in the current area divided by records in all selected areas. Other filters are retained.",
+          "displayFolder": "Area & Category detail",
+          "formatString": "0.00%",
+          "references": {
+            "measures": [
+              {
+                "entity": "_Measures",
+                "name": "Total Delivery Records"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Area Sample Signal",
+          "dataType": "Text",
+          "expression": "VAR Records = [Total Delivery Records]\nVAR LargestArea = MAXX(ALLSELECTED(dim_area[area_name]), [Total Delivery Records])\nRETURN\n    IF(Records > 0 && ISINSCOPE(dim_area[area_name]),\n        SWITCH(TRUE(), Records < 200, \"Small n\", Records = LargestArea, \"Largest group\", \"—\")\n    )",
+          "description": "Flags areas with fewer than 200 records, then identifies the largest selected area by volume.",
+          "displayFolder": "Area & Category detail",
+          "references": {
+            "measures": [
+              {
+                "entity": "_Measures",
+                "name": "Total Delivery Records"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Area Sample Background",
+          "dataType": "Text",
+          "expression": "IF([Total Delivery Records] > 0 && [Total Delivery Records] < 200, \"#FFF1D9\")",
+          "description": "Amber fill for a non-empty area with fewer than 200 records.",
+          "displayFolder": "Area & Category detail",
+          "references": {
+            "measures": [
+              {
+                "entity": "_Measures",
+                "name": "Total Delivery Records"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Category Bar Color",
+          "dataType": "Text",
+          "expression": "IF(SELECTEDVALUE(dim_category[category_name]) = \"Grocery\", \"#FF9900\", \"#146EB4\")",
+          "description": "Grocery uses the Overview orange accent. Other categories use Overview blue.",
+          "displayFolder": "Area & Category detail"
+        },
+        {
+          "name": "Valid distance",
+          "dataType": "Double",
+          "expression": "DIVIDE(COALESCE(CALCULATE([Total Delivery Records], KEEPFILTERS(fact_delivery[valid_distance_flag] = TRUE())), 0), [Total Delivery Records])",
+          "description": "Share of filtered records flagged as valid distance.",
+          "displayFolder": "Area & Category detail",
+          "formatString": "0.0%",
+          "references": {
+            "measures": [
+              {
+                "entity": "_Measures",
+                "name": "Total Delivery Records"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Valid rating",
+          "dataType": "Double",
+          "expression": "DIVIDE(COALESCE(CALCULATE([Total Delivery Records], KEEPFILTERS(fact_delivery[valid_rating_flag] = TRUE())), 0), [Total Delivery Records])",
+          "description": "Share of filtered records flagged as valid agent rating.",
+          "displayFolder": "Area & Category detail",
+          "formatString": "0.0%",
+          "references": {
+            "measures": [
+              {
+                "entity": "_Measures",
+                "name": "Total Delivery Records"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Pickup delay available",
+          "dataType": "Double",
+          "expression": "DIVIDE(COALESCE(CALCULATE([Total Delivery Records], KEEPFILTERS(NOT ISBLANK(fact_delivery[pickup_delay_minutes]))), 0), [Total Delivery Records])",
+          "description": "Share of filtered records with a nonblank pickup delay, including zero.",
+          "displayFolder": "Area & Category detail",
+          "formatString": "0.0%",
+          "references": {
+            "measures": [
+              {
+                "entity": "_Measures",
+                "name": "Total Delivery Records"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Operational context complete",
+          "dataType": "Double",
+          "expression": "DIVIDE(COALESCE(CALCULATE([Total Delivery Records], KEEPFILTERS(fact_delivery[missing_operational_context_flag] = FALSE())), 0), [Total Delivery Records])",
+          "description": "Share of filtered records with order time, weather and traffic available.",
+          "displayFolder": "Area & Category detail",
+          "formatString": "0.0%",
+          "references": {
+            "measures": [
+              {
+                "entity": "_Measures",
+                "name": "Total Delivery Records"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
