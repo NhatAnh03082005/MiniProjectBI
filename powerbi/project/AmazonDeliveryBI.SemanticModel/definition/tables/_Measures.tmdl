@@ -115,6 +115,21 @@ table _Measures
 		formatString: 0.00
 		lineageTag: d009313e-98d9-4d55-b53c-68e800bb7dc0
 
+	measure 'At or Below Baseline P90 Count' = [Valid Delivery Time Count] - [Above Baseline P90 Count]
+		formatString: #,0
+		lineageTag: b5072ac3-b39e-4f62-9227-00ec0d047ca6
+
+	measure 'Daily Delivery Records' = VAR MinDateKey = CALCULATE ( MIN ( fact_delivery[date_key] ), REMOVEFILTERS () ) VAR MaxDateKey = CALCULATE ( MAX ( fact_delivery[date_key] ), REMOVEFILTERS () ) VAR CurrentDateKey = MAX ( dim_date[date_key] ) RETURN IF ( CurrentDateKey >= MinDateKey && CurrentDateKey <= MaxDateKey, COALESCE ( [Total Delivery Records], 0 ), BLANK () )
+		formatString: #,0
+		lineageTag: 1436db15-981e-4757-b8e8-e6fcbc1ab85a
+
+	measure 'Time Cell Background' = VAR Minutes = [Average Delivery Time] RETURN SWITCH ( TRUE (), ISBLANK ( Minutes ), "#FFFFFF", Minutes < 110, "#FFF3E0", Minutes < 125, "#FFD08A", Minutes < 135, "#FFB347", "#FF9900" )
+		lineageTag: d63f082f-3cdf-4e1e-812f-7927ad12f217
+
+	measure 'Average Delivery Minutes' = [Average Delivery Time]
+		formatString: 0.0
+		lineageTag: 53e450fb-49d1-43ed-bacf-76f82180a838
+
 	column Placeholder
 		isHidden
 		formatString: 0
