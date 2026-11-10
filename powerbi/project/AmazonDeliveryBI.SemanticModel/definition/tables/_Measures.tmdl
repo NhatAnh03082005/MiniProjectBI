@@ -130,6 +130,21 @@ table _Measures
 		formatString: 0.0
 		lineageTag: 53e450fb-49d1-43ed-bacf-76f82180a838
 
+	measure 'Valid Distance Records' = CALCULATE ( [Total Delivery Records], KEEPFILTERS ( fact_delivery[valid_distance_flag] = TRUE () ) )
+		formatString: #,0
+		displayFolder: Operational Drivers
+		lineageTag: c3440f4d-7945-4051-9bba-3bb937dc4554
+
+	measure 'Valid Distance Delivery Minutes' = CALCULATE ( [Average Delivery Minutes], KEEPFILTERS ( fact_delivery[valid_distance_flag] = TRUE () ) )
+		formatString: 0.0
+		displayFolder: Operational Drivers
+		lineageTag: c21bcec2-a6f6-4727-b099-80497a885950
+
+	measure 'Valid Distance Coverage' = DIVIDE ( [Valid Distance Records], [Total Delivery Records] )
+		formatString: 0.0%
+		displayFolder: Operational Drivers
+		lineageTag: 71198761-70f5-4db8-8307-b87118dd10df
+
 	column Placeholder
 		isHidden
 		formatString: 0
