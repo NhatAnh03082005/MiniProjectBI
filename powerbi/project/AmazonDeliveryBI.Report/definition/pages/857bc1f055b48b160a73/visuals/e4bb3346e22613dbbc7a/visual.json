@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "e4bb3346e22613dbbc7a",
   "position": {
-    "x": 336,
-    "y": 760,
+    "x": 327.54863201989792,
+    "y": 752.81895536064928,
     "z": 31000,
-    "width": 975,
-    "height": 276,
+    "height": 276.878125409085,
+    "width": 895.78217044115718,
     "tabOrder": 31000
   },
   "visual": {
@@ -141,7 +141,6 @@
         ]
       }
     },
-    "drillFilterOtherVisuals": true,
     "objects": {
       "columnHeaders": [
         {
@@ -425,7 +424,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "16D"
+                  "Value": "17D"
                 }
               }
             },
@@ -443,7 +442,14 @@
             "bold": {
               "expr": {
                 "Literal": {
-                  "Value": "true"
+                  "Value": "false"
+                }
+              }
+            },
+            "fontFamily": {
+              "expr": {
+                "Literal": {
+                  "Value": "'''Segoe UI Semibold'', wf_segoe-ui_semibold, helvetica, arial, sans-serif'"
                 }
               }
             }
@@ -470,7 +476,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "10D"
+                  "Value": "12D"
                 }
               }
             },
@@ -513,7 +519,21 @@
             }
           }
         }
+      ],
+      "dropShadow": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
       ]
-    }
+    },
+    "drillFilterOtherVisuals": true
   }
 }

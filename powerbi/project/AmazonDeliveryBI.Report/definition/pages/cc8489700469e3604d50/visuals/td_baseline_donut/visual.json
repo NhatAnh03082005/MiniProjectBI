@@ -1,12 +1,12 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "td_baseline_donut",
   "position": {
-    "x": 1313.813849980364,
-    "y": 168.29846838591439,
+    "x": 1359.518928415964,
+    "y": 191.7477229054023,
     "z": 12000,
-    "height": 432.50896714229611,
-    "width": 542.8982851158529,
+    "height": 422.58064516129031,
+    "width": 498.38709677419354,
     "tabOrder": 12000
   },
   "visual": {
@@ -109,6 +109,34 @@
               "expr": {
                 "Literal": {
                   "Value": "true"
+                }
+              }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "12D"
+                }
+              }
+            },
+            "labelPrecision": {
+              "expr": {
+                "Literal": {
+                  "Value": "0L"
+                }
+              }
+            },
+            "percentageLabelPrecision": {
+              "expr": {
+                "Literal": {
+                  "Value": "1L"
+                }
+              }
+            },
+            "labelDisplayUnits": {
+              "expr": {
+                "Literal": {
+                  "Value": "1D"
                 }
               }
             }
@@ -214,7 +242,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "20D"
+                  "Value": "17D"
                 }
               }
             },
@@ -259,7 +287,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "14D"
+                  "Value": "12D"
                 }
               }
             },

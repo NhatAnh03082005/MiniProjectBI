@@ -1,75 +1,75 @@
 blocks:
-- all_upstream_blocks_executed: true
-  color: null
-  configuration: {}
-  downstream_blocks:
-  - validate_full_amazon_delivery
-  executor_config: null
-  executor_type: local_python
-  has_callback: false
-  language: python
-  name: full_load_amazon_delivery
-  retry_config: null
-  status: executed
-  timeout: null
-  type: data_loader
-  upstream_blocks: []
-  uuid: full_load_amazon_delivery
-- all_upstream_blocks_executed: true
-  color: null
-  configuration: {}
-  downstream_blocks:
-  - export_full_amazon_delivery
-  executor_config: null
-  executor_type: local_python
-  has_callback: false
-  language: python
-  name: validate_full_amazon_delivery
-  retry_config: null
-  status: executed
-  timeout: null
-  type: transformer
-  upstream_blocks:
-  - full_load_amazon_delivery
-  uuid: validate_full_amazon_delivery
-- all_upstream_blocks_executed: true
-  color: null
-  configuration: {}
-  downstream_blocks:
-  - verify_amazon_delivery_batch
-  executor_config: null
-  executor_type: local_python
-  has_callback: false
-  language: python
-  name: export_full_amazon_delivery
-  retry_config: null
-  status: executed
-  timeout: null
-  type: data_exporter
-  upstream_blocks:
-  - validate_full_amazon_delivery
-  uuid: export_full_amazon_delivery
-- all_upstream_blocks_executed: true
-  color: null
-  configuration: {}
-  downstream_blocks: []
-  executor_config: null
-  executor_type: local_python
-  has_callback: false
-  language: python
-  name: verify_amazon_delivery_batch
-  retry_config: null
-  status: executed
-  timeout: null
-  type: custom
-  upstream_blocks:
-  - export_full_amazon_delivery
-  uuid: verify_amazon_delivery_batch
+  - all_upstream_blocks_executed: true
+    color: null
+    configuration: {}
+    downstream_blocks:
+      - validate_full_amazon_delivery
+    executor_config: null
+    executor_type: local_python
+    has_callback: false
+    language: python
+    name: full_load_amazon_delivery
+    retry_config: null
+    status: executed
+    timeout: null
+    type: data_loader
+    upstream_blocks: []
+    uuid: full_load_amazon_delivery
+  - all_upstream_blocks_executed: true
+    color: null
+    configuration: {}
+    downstream_blocks:
+      - export_full_amazon_delivery
+    executor_config: null
+    executor_type: local_python
+    has_callback: false
+    language: python
+    name: validate_full_amazon_delivery
+    retry_config: null
+    status: executed
+    timeout: null
+    type: transformer
+    upstream_blocks:
+      - full_load_amazon_delivery
+    uuid: validate_full_amazon_delivery
+  - all_upstream_blocks_executed: true
+    color: null
+    configuration: {}
+    downstream_blocks:
+      - verify_amazon_delivery_batch
+    executor_config: null
+    executor_type: local_python
+    has_callback: false
+    language: python
+    name: export_full_amazon_delivery
+    retry_config: null
+    status: executed
+    timeout: null
+    type: data_exporter
+    upstream_blocks:
+      - validate_full_amazon_delivery
+    uuid: export_full_amazon_delivery
+  - all_upstream_blocks_executed: true
+    color: null
+    configuration: {}
+    downstream_blocks: []
+    executor_config: null
+    executor_type: local_python
+    has_callback: false
+    language: python
+    name: verify_amazon_delivery_batch
+    retry_config: null
+    status: executed
+    timeout: null
+    type: custom
+    upstream_blocks:
+      - export_full_amazon_delivery
+    uuid: verify_amazon_delivery_batch
 cache_block_output_in_memory: false
 callbacks: []
 concurrency_config: {}
 conditionals: []
-created_at: '2026-10-19 09:23:29.774213+00:00'
+created_at: "2026-10-19 09:23:29.774213+00:00"
 data_integration: null
 description: null
 executor_config: {}
@@ -80,7 +80,7 @@ name: amazon_delivery_full_load
 notification_config: {}
 remote_variables_dir: null
 retry_config: {}
-run_pipeline_in_one_process: false
+run_pipeline_in_one_process: true
 settings:
   triggers: null
 spark_config: {}

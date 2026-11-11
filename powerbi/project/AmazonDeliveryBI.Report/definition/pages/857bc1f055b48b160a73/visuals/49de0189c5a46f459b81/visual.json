@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "49de0189c5a46f459b81",
   "position": {
-    "x": 1570,
-    "y": 917,
+    "x": 1540.0214687786361,
+    "y": 917.49810184579133,
     "z": 55000,
-    "width": 292,
-    "height": 51,
+    "height": 50.670506610812936,
+    "width": 322.11964916873939,
     "tabOrder": 55000
   },
   "visual": {
@@ -39,8 +39,8 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "_Measures",
-                      "Schema": "extension"
+                      "Schema": "extension",
+                      "Entity": "_Measures"
                     }
                   },
                   "Property": "Pickup delay available"
@@ -54,7 +54,6 @@
         }
       }
     },
-    "drillFilterOtherVisuals": true,
     "objects": {
       "dataPoint": [
         {
@@ -307,6 +306,7 @@
           }
         }
       ]
-    }
+    },
+    "drillFilterOtherVisuals": true
   }
 }

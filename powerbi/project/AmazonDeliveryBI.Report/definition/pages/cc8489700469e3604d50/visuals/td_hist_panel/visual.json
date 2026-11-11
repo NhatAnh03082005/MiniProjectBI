@@ -1,12 +1,12 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "td_hist_panel",
   "position": {
-    "x": 336,
-    "y": 168,
+    "x": 338.55118648048023,
+    "y": 191.7477229054023,
     "z": 6000,
-    "height": 432,
-    "width": 960,
+    "height": 422.58064516129031,
+    "width": 996.77419354838707,
     "tabOrder": 6000
   },
   "visual": {
@@ -35,21 +35,21 @@
             "show": {
               "expr": {
                 "Literal": {
-                  "Value": "false"
+                  "Value": "true"
                 }
               }
             },
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "''"
+                  "Value": "'Delivery-time distribution'"
                 }
               }
             },
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "20D"
+                  "Value": "17D"
                 }
               }
             },
@@ -80,21 +80,21 @@
             "show": {
               "expr": {
                 "Literal": {
-                  "Value": "false"
+                  "Value": "true"
                 }
               }
             },
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "''"
+                  "Value": "'0-minute intervals [start, end) • Valid delivery-time records'"
                 }
               }
             },
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "14D"
+                  "Value": "12D"
                 }
               }
             },
@@ -200,7 +200,7 @@
             "top": {
               "expr": {
                 "Literal": {
-                  "Value": "0D"
+                  "Value": "14D"
                 }
               }
             },
@@ -214,7 +214,7 @@
             "left": {
               "expr": {
                 "Literal": {
-                  "Value": "0D"
+                  "Value": "16D"
                 }
               }
             },

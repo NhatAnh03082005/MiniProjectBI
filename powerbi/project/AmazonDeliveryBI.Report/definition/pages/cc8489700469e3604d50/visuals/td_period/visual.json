@@ -1,12 +1,12 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "td_period",
   "position": {
-    "x": 776.34454771566959,
-    "y": 624.33302788323078,
+    "x": 778.81290285296939,
+    "y": 637.85240945439807,
     "z": 16000,
-    "height": 408.98337478727581,
-    "width": 448.79591569577173,
+    "height": 383.01886792452831,
+    "width": 437.73584905660374,
     "tabOrder": 17000
   },
   "visual": {
@@ -287,7 +287,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "20D"
+                  "Value": "17D"
                 }
               }
             },
@@ -332,7 +332,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "14D"
+                  "Value": "12D"
                 }
               }
             },

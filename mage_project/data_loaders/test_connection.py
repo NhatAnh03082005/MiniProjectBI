@@ -60,7 +60,7 @@ def validate_connection(output, *args):
 
     row = output.iloc[0]
 
-    assert row['database_name'] == 'AmazonDeliveryBI'
+    assert row['database_name'] == os.environ['MSSQL_DATABASE']
     assert pd.notna(row['audit_schema_id'])
     assert pd.notna(row['staging_schema_id'])
     assert pd.notna(row['audit_table_id'])

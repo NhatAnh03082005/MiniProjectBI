@@ -1,12 +1,12 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "td_kpi_1",
   "position": {
-    "x": 584,
-    "y": 250,
+    "x": 601.38598608947325,
+    "y": 281.90901322798288,
     "z": 18000,
-    "height": 110,
-    "width": 220,
+    "height": 103.22580645161291,
+    "width": 220.96774193548387,
     "tabOrder": 19000
   },
   "visual": {
@@ -58,7 +58,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "27D"
+                  "Value": "20D"
                 }
               }
             },
@@ -83,7 +83,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "27D"
+                  "Value": "20D"
                 }
               }
             },
@@ -97,6 +97,20 @@
           },
           "selector": {
             "metadata": "_Measures.Median Delivery Time"
+          }
+        },
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "19D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "_Measures.Average Delivery Time"
           }
         }
       ],
@@ -193,6 +207,13 @@
                       "Value": "'#E5E7EB'"
                     }
                   }
+                }
+              }
+            },
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
                 }
               }
             }
@@ -362,6 +383,19 @@
               "expr": {
                 "Literal": {
                   "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "padding": [
+        {
+          "properties": {
+            "left": {
+              "expr": {
+                "Literal": {
+                  "Value": "20D"
                 }
               }
             }

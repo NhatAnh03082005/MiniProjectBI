@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "14709fd2e5aa09f22e79",
   "position": {
-    "x": 352,
-    "y": 694,
+    "x": 354.5454545454545,
+    "y": 670,
     "z": 50000,
-    "width": 792,
     "height": 40,
+    "width": 845.45454545454538,
     "tabOrder": 50000
   },
   "visual": {
@@ -21,10 +21,10 @@
                   {
                     "value": "Area share  ",
                     "textStyle": {
+                      "fontWeight": "bold",
                       "fontFamily": "Segoe UI",
                       "fontSize": "15px",
-                      "color": "#146EB4",
-                      "fontWeight": "bold"
+                      "color": "#146eb4"
                     }
                   },
                   {
@@ -32,11 +32,10 @@
                     "textStyle": {
                       "fontFamily": "Segoe UI",
                       "fontSize": "15px",
-                      "color": "#232F3E"
+                      "color": "#232f3e"
                     }
                   }
-                ],
-                "horizontalTextAlignment": "left"
+                ]
               }
             ]
           }

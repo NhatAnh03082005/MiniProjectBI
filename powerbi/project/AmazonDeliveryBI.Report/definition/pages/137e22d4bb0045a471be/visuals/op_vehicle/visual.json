@@ -1,12 +1,12 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "op_vehicle",
   "position": {
-    "x": 1366,
-    "y": 168,
+    "x": 1363.3983832962431,
+    "y": 201.23431977353059,
     "z": 10000,
-    "height": 410,
-    "width": 490,
+    "height": 385.45778243225556,
+    "width": 490.41811755465375,
     "tabOrder": 10000
   },
   "visual": {
@@ -404,7 +404,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "22D"
+                  "Value": "17D"
                 }
               }
             },
@@ -449,7 +449,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "14D"
+                  "Value": "12D"
                 }
               }
             },

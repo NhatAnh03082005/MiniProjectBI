@@ -1,12 +1,12 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "op_vehicle_note",
   "position": {
-    "x": 1380,
-    "y": 531,
+    "x": 1376.4279642296112,
+    "y": 540.36477083060618,
     "z": 11000,
-    "height": 42,
-    "width": 463,
+    "height": 34.383558057337346,
+    "width": 461.46354234847496,
     "tabOrder": 11000
   },
   "visual": {
@@ -19,11 +19,20 @@
               {
                 "textRuns": [
                   {
-                    "value": "Bicycle: small sample; check count before comparison.",
+                    "value": "Bicycle",
+                    "textStyle": {
+                      "fontWeight": "bold",
+                      "fontFamily": "Segoe UI",
+                      "fontSize": "14pt",
+                      "color": "#925000"
+                    }
+                  },
+                  {
+                    "value": ": small sample; check count before comparison.",
                     "textStyle": {
                       "fontFamily": "Segoe UI",
                       "fontSize": "14pt",
-                      "color": "#232F3E"
+                      "color": "#232f3e"
                     }
                   }
                 ]
@@ -130,7 +139,7 @@
             "show": {
               "expr": {
                 "Literal": {
-                  "Value": "false"
+                  "Value": "true"
                 }
               }
             },
@@ -139,7 +148,7 @@
                 "color": {
                   "expr": {
                     "Literal": {
-                      "Value": "'#FFFFFF'"
+                      "Value": "'#FFF1D9'"
                     }
                   }
                 }
@@ -161,7 +170,7 @@
             "show": {
               "expr": {
                 "Literal": {
-                  "Value": "false"
+                  "Value": "true"
                 }
               }
             },
@@ -216,17 +225,17 @@
                 }
               }
             },
-            "left": {
+            "right": {
               "expr": {
                 "Literal": {
                   "Value": "0D"
                 }
               }
             },
-            "right": {
+            "left": {
               "expr": {
                 "Literal": {
-                  "Value": "0D"
+                  "Value": "10D"
                 }
               }
             }

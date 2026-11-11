@@ -80,7 +80,7 @@ name: amazon_delivery_incremental_load
 notification_config: {}
 remote_variables_dir: null
 retry_config: {}
-run_pipeline_in_one_process: false
+run_pipeline_in_one_process: true
 settings:
   triggers: null
 spark_config: {}
@@ -88,4 +88,7 @@ tags:
 - incremental
 type: python
 uuid: amazon_delivery_incremental_load
+variables:
+  batch_name: INCREMENTAL_02
+variables_dir: C:\Users\PC\.mage_data\mage_project
 widgets: []

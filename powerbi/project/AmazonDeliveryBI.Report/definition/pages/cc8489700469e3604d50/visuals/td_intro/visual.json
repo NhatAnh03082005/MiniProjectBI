@@ -1,12 +1,12 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "td_intro",
   "position": {
-    "x": 336,
-    "y": 112,
+    "x": 335.48387096774195,
+    "y": 127.41935483870968,
     "z": 11000,
-    "height": 42,
-    "width": 1520,
+    "height": 56.451612903225808,
+    "width": 1520.9677419354839,
     "tabOrder": 11000
   },
   "visual": {
@@ -19,11 +19,10 @@
               {
                 "textRuns": [
                   {
-                    "value": "Delivery-time distribution and patterns across dates and time periods",
+                    "value": "Delivery Time Distribution & Patterns",
                     "textStyle": {
-                      "fontFamily": "Segoe UI",
-                      "fontSize": "22pt",
-                      "color": "#232f3e"
+                      "fontWeight": "bold",
+                      "fontSize": "28pt"
                     }
                   }
                 ]

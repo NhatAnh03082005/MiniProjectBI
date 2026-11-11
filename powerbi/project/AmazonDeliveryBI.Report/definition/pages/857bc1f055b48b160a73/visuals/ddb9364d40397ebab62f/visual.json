@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "ddb9364d40397ebab62f",
   "position": {
-    "x": 336,
-    "y": 306,
+    "x": 327.54863201989792,
+    "y": 289.54575206178822,
     "z": 28000,
-    "width": 831,
-    "height": 436,
+    "height": 437.93794999345465,
+    "width": 895.78217044115718,
     "tabOrder": 28000
   },
   "visual": {
@@ -28,8 +28,8 @@
               },
               "queryRef": "dim_area.area_name",
               "nativeQueryRef": "Area",
-              "displayName": "Area",
-              "active": true
+              "active": true,
+              "displayName": "Area"
             }
           ]
         },
@@ -55,8 +55,8 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "_Measures",
-                      "Schema": "extension"
+                      "Schema": "extension",
+                      "Entity": "_Measures"
                     }
                   },
                   "Property": "Area Record Share"
@@ -101,8 +101,8 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "_Measures",
-                      "Schema": "extension"
+                      "Schema": "extension",
+                      "Entity": "_Measures"
                     }
                   },
                   "Property": "Area Sample Signal"
@@ -122,10 +122,11 @@
               "Measure": {
                 "Expression": {
                   "SourceRef": {
+                    "Schema": "extension",
                     "Entity": "_Measures"
                   }
                 },
-                "Property": "Total Delivery Records"
+                "Property": "Area Sample Signal"
               }
             },
             "direction": "Descending"
@@ -133,7 +134,6 @@
         ]
       }
     },
-    "drillFilterOtherVisuals": true,
     "objects": {
       "columnHeaders": [
         {
@@ -263,8 +263,8 @@
                     "Measure": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "_Measures",
-                          "Schema": "extension"
+                          "Schema": "extension",
+                          "Entity": "_Measures"
                         }
                       },
                       "Property": "Area Sample Background"
@@ -294,8 +294,8 @@
                     "Measure": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "_Measures",
-                          "Schema": "extension"
+                          "Schema": "extension",
+                          "Entity": "_Measures"
                         }
                       },
                       "Property": "Area Sample Background"
@@ -325,8 +325,8 @@
                     "Measure": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "_Measures",
-                          "Schema": "extension"
+                          "Schema": "extension",
+                          "Entity": "_Measures"
                         }
                       },
                       "Property": "Area Sample Background"
@@ -372,7 +372,7 @@
             "rowPadding": {
               "expr": {
                 "Literal": {
-                  "Value": "6D"
+                  "Value": "10D"
                 }
               }
             }
@@ -559,7 +559,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "16D"
+                  "Value": "17D"
                 }
               }
             },
@@ -577,7 +577,14 @@
             "bold": {
               "expr": {
                 "Literal": {
-                  "Value": "true"
+                  "Value": "false"
+                }
+              }
+            },
+            "fontFamily": {
+              "expr": {
+                "Literal": {
+                  "Value": "'''Segoe UI Semibold'', wf_segoe-ui_semibold, helvetica, arial, sans-serif'"
                 }
               }
             }
@@ -604,7 +611,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "10D"
+                  "Value": "12D"
                 }
               }
             },
@@ -647,7 +654,21 @@
             }
           }
         }
+      ],
+      "dropShadow": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
       ]
-    }
+    },
+    "drillFilterOtherVisuals": true
   }
 }

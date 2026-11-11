@@ -1,12 +1,12 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "td_histogram",
   "position": {
-    "x": 352,
-    "y": 370,
+    "x": 359.51892841596407,
+    "y": 383.68320677636996,
     "z": 15000,
-    "height": 218,
-    "width": 928,
+    "height": 217.74193548387098,
+    "width": 959.67741935483866,
     "tabOrder": 16000
   },
   "visual": {

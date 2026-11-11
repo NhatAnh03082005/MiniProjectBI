@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "3ab7cdb3a02ad63bc49f",
   "position": {
-    "x": 1329,
-    "y": 760,
+    "x": 1246.969696969697,
+    "y": 753.030303030303,
     "z": 32000,
-    "width": 551,
-    "height": 276,
+    "height": 275.75757575757575,
+    "width": 624.24242424242425,
     "tabOrder": 32000
   },
   "visual": {
@@ -15,7 +15,15 @@
       "general": [
         {
           "properties": {
-            "paragraphs": []
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": ""
+                  }
+                ]
+              }
+            ]
           }
         }
       ]
@@ -137,7 +145,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "16D"
+                  "Value": "17D"
                 }
               }
             },
@@ -156,6 +164,13 @@
               "expr": {
                 "Literal": {
                   "Value": "true"
+                }
+              }
+            },
+            "fontFamily": {
+              "expr": {
+                "Literal": {
+                  "Value": "'''Segoe UI Semibold'', wf_segoe-ui_semibold, helvetica, arial, sans-serif'"
                 }
               }
             }
@@ -182,7 +197,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "10D"
+                  "Value": "12D"
                 }
               }
             },
@@ -214,6 +229,19 @@
               "expr": {
                 "Literal": {
                   "Value": "'Shares of records that meet the model''s data-quality rules.'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "dropShadow": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
                 }
               }
             }

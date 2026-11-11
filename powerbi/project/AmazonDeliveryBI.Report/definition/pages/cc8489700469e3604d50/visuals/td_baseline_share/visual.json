@@ -1,9 +1,9 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "td_baseline_share",
   "position": {
-    "x": 1473.0640136143475,
-    "y": 350,
+    "x": 1491.776992932093,
+    "y": 370.77998096991837,
     "z": 21000,
     "height": 104,
     "width": 236,
@@ -40,7 +40,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "36D"
+                  "Value": "30D"
                 }
               }
             },

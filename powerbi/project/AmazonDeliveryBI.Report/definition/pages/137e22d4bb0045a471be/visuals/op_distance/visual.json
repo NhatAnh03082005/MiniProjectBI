@@ -1,12 +1,12 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "op_distance",
   "position": {
-    "x": 336,
-    "y": 602,
+    "x": 336.59693677182878,
+    "y": 613.47506218091371,
     "z": 6000,
-    "height": 430,
-    "width": 730,
+    "height": 403.55439193611727,
+    "width": 834.25369812802728,
     "tabOrder": 6000
   },
   "visual": {
@@ -278,7 +278,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "22D"
+                  "Value": "18D"
                 }
               }
             },
@@ -323,7 +323,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "14D"
+                  "Value": "12D"
                 }
               }
             },
