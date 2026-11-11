@@ -2,7 +2,7 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
   "name": "137e22d4bb0045a471be",
   "displayName": "Operational Drivers",
-  "displayOption": "FitToWidth",
+  "displayOption": "FitToPage",
   "height": 1080,
   "width": 1920,
   "objects": {
@@ -39,5 +39,107 @@
         }
       }
     ]
-  }
+  },
+  "visualInteractions": [
+    {
+      "source": "op_traffic",
+      "target": "op_weather",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_traffic",
+      "target": "op_vehicle",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_traffic",
+      "target": "op_distance",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_traffic",
+      "target": "op_tree",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_weather",
+      "target": "op_traffic",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_weather",
+      "target": "op_vehicle",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_weather",
+      "target": "op_distance",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_weather",
+      "target": "op_tree",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_vehicle",
+      "target": "op_traffic",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_vehicle",
+      "target": "op_weather",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_vehicle",
+      "target": "op_distance",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_vehicle",
+      "target": "op_tree",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_distance",
+      "target": "op_traffic",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_distance",
+      "target": "op_weather",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_distance",
+      "target": "op_vehicle",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_distance",
+      "target": "op_tree",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_tree",
+      "target": "op_traffic",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_tree",
+      "target": "op_weather",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_tree",
+      "target": "op_vehicle",
+      "type": "DataFilter"
+    },
+    {
+      "source": "op_tree",
+      "target": "op_distance",
+      "type": "DataFilter"
+    }
+  ]
 }
