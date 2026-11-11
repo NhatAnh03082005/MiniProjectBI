@@ -124,6 +124,7 @@ table fact_delivery
 		lineageTag: 63931ece-a0c7-473d-9936-a6043562da3e
 		summarizeBy: none
 		sourceColumn: time_period
+		sortByColumn: 'Time Period Sort'
 
 		changedProperty = IsHidden
 
@@ -352,16 +353,32 @@ table fact_delivery
 
 		annotation SummarizationSetBy = Automatic
 
+	column 'Delivery Bin Start' = IF ( ISBLANK ( fact_delivery[delivery_time_minutes] ), BLANK (), INT ( fact_delivery[delivery_time_minutes] / 20 ) * 20 )
+		dataType: int64
+		isHidden
+		lineageTag: 52ab06ce-b6b3-4442-bd78-98bc1e36e64a
+		summarizeBy: none
+
+	column 'Delivery Bin' = IF ( ISBLANK ( fact_delivery[delivery_time_minutes] ), BLANK (), FORMAT ( fact_delivery[Delivery Bin Start], "0" ) & "–" & FORMAT ( fact_delivery[Delivery Bin Start] + 20, "0" ) )
+		dataType: string
+		lineageTag: c3231a06-c85d-444d-b471-f25547edcd3e
+		summarizeBy: none
+		sortByColumn: 'Delivery Bin Start'
+
+	column 'Time Period Sort' = SWITCH ( TRUE (), ISBLANK ( fact_delivery[order_hour] ), 5, fact_delivery[order_hour] < 6, 4, fact_delivery[order_hour] < 12, 1, fact_delivery[order_hour] < 18, 2, 3 )
+		dataType: int64
+		isHidden
+		lineageTag: 6f14c43e-e824-4b4c-bb84-9377cbf0f9c2
+		summarizeBy: none
+
 	partition fact_delivery = m
 		mode: import
 		source =
 				let
-				  Source = Sql.Database("NHAT-ANH\SQLEXPRESS", "AmazonDeliveryBI"),
+				  Source = Sql.Database("localhost\SQLEXPRESS", "AmazonDeliveryBI"),
 				  #"Navigation 1" = Source{[Schema = "dw", Item = "fact_delivery"]}[Data]
 				in
 				  #"Navigation 1"
-
-	changedProperty = Name
 
 	changedProperty = IsHidden
 

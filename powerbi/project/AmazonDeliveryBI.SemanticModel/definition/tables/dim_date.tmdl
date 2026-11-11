@@ -145,13 +145,11 @@ table dim_date
 		mode: import
 		source =
 				let
-				  Source = Sql.Database("NHAT-ANH\SQLEXPRESS", "AmazonDeliveryBI"),
+				  Source = Sql.Database("localhost\SQLEXPRESS", "AmazonDeliveryBI"),
 				  #"Navigation 1" = Source{[Schema = "dw", Item = "dim_date"]}[Data],
 				    #"Filtered Rows" = Table.SelectRows(#"Navigation 1", each ([date_key] <> 0))
 				in
 				  #"Filtered Rows"
-
-	changedProperty = Name
 
 	changedProperty = IsHidden
 
