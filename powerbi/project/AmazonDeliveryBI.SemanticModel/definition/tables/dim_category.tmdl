@@ -27,12 +27,10 @@ table dim_category
 		mode: import
 		source =
 				let
-				  Source = Sql.Database("NHAT-ANH\SQLEXPRESS", "AmazonDeliveryBI"),
+				  Source = Sql.Database("localhost\SQLEXPRESS", "AmazonDeliveryBI"),
 				  #"Navigation 1" = Source{[Schema = "dw", Item = "dim_category"]}[Data]
 				in
 				  #"Navigation 1"
-
-	changedProperty = Name
 
 	changedProperty = IsHidden
 

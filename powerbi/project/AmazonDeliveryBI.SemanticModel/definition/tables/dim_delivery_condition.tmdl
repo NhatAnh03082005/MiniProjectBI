@@ -37,12 +37,10 @@ table dim_delivery_condition
 		mode: import
 		source =
 				let
-				  Source = Sql.Database("NHAT-ANH\SQLEXPRESS", "AmazonDeliveryBI"),
+				  Source = Sql.Database("localhost\SQLEXPRESS", "AmazonDeliveryBI"),
 				  #"Navigation 1" = Source{[Schema = "dw", Item = "dim_delivery_condition"]}[Data]
 				in
 				  #"Navigation 1"
 
 	changedProperty = IsHidden
-
-	changedProperty = Name
 
