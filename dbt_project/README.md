@@ -101,6 +101,7 @@ Singular tests kiểm tra:
 - Valid-distance rule và distance band.
 - Không bỏ sót lỗi chuyển kiểu trong bảng `delivery_rejections`; không để dòng bị loại vào Fact; đối soát raw, Fact và dòng bị loại.
 - Mười một trường nguồn bắt buộc đều có giá trị trên các dòng được nhận vào DDS; Weather, Traffic, Vehicle, Area và Category được phép `Unknown`.
+- `warn_rejected_delivery_rows` phát cảnh báo khi có dòng raw bị loại, đếm `staging_row_id` riêng biệt; cảnh báo không làm hỏng build. Các test tính đúng quy tắc và đối soát vẫn là lỗi nếu vi phạm.
 
 ## Cấu hình profile
 
@@ -137,7 +138,7 @@ Dependencies được pin tại `requirements.txt`. Không commit `.python312/`,
 
 ## Validation status
 
-Logic xử lý lỗi, cột phân loại tùy chọn và khoảng cách mới đã qua `dbt build` trên SQL Server local. Build chạy 7 table models, 4 view models, 78 data tests và đạt `PASS=89, WARN=0, ERROR=0`. Đối soát: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại riêng biệt. Trong Fact, 39.958 dòng có khoảng cách không quá 50 km, 151 dòng có khoảng cách trên 50 km được giữ giá trị và gắn cờ, 3.485 dòng có tọa độ Store `(0,0)` nên không thể tính khoảng cách đáng tin cậy. Bảng lỗi có 54 lỗi rating thiếu, 91 lỗi giờ đặt thiếu và 53 lỗi rating ngoài 1–5. Weather, Traffic, Vehicle, Area và Category thiếu không tự chặn DDS; dữ liệu mẫu hiện không có dòng nào thiếu Vehicle, Area hoặc Category nên ba nhóm Unknown này chưa có trường hợp thực tế để đối soát. Cả 91 dòng thiếu Weather/Traffic hiện cũng thiếu `Order_Time`, nên số dòng Fact chưa đổi. Log cũ trong `evidence/final_etl/` có trước thay đổi này và không đại diện cho build mới.
+Logic xử lý lỗi, cột phân loại tùy chọn và khoảng cách mới đã qua `dbt build` trên SQL Server local. Build chạy 7 table models, 4 view models, 79 data tests và đạt `PASS=89, WARN=1, ERROR=0`. Cảnh báo `warn_rejected_delivery_rows` ghi `Got 145 results`; mỗi kết quả là một `staging_row_id` bị loại, không phải một cột lỗi. Đối soát: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại riêng biệt. Trong Fact, 39.958 dòng có khoảng cách không quá 50 km, 151 dòng có khoảng cách trên 50 km được giữ giá trị và gắn cờ, 3.485 dòng có tọa độ Store `(0,0)` nên không thể tính khoảng cách đáng tin cậy. Bảng lỗi có 54 lỗi rating thiếu, 91 lỗi giờ đặt thiếu và 53 lỗi rating ngoài 1–5. Weather, Traffic, Vehicle, Area và Category thiếu không tự chặn DDS; dữ liệu mẫu hiện không có dòng nào thiếu Vehicle, Area hoặc Category nên ba nhóm Unknown này chưa có trường hợp thực tế để đối soát. Cả 91 dòng thiếu Weather/Traffic hiện cũng thiếu `Order_Time`, nên số dòng Fact chưa đổi. Log cũ trong `evidence/final_etl/` có trước thay đổi này và không đại diện cho build mới.
 
 ## TODO và quyết định cần chốt
 

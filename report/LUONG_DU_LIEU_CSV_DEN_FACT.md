@@ -652,15 +652,16 @@ Kiểm tra năm foreign key trong Fact đều tìm thấy khóa tương ứng tr
 | `test_delivery_rejection_reconciliation` | Đối soát raw = Fact + số dòng bị loại riêng biệt. |
 | `test_rejected_orders_excluded` | Không để đơn bị loại xuất hiện trong Fact. |
 | `test_required_analytics_fields` | Kiểm tra dòng được nhận không thiếu trường nguồn cần cho báo cáo. |
+| `warn_rejected_delivery_rows` | Cảnh báo số dòng raw bị loại, đếm mỗi `staging_row_id` một lần. |
 
 Kết quả runtime hiện có:
 
 ```text
 7 table models
 4 view models
-78 data tests
+79 data tests
 PASS = 89
-WARN = 0
+WARN = 1 (145 dòng raw bị loại)
 ERROR = 0
 SKIP = 0
 ```
@@ -735,7 +736,7 @@ Thiết kế này mang lại các lợi ích:
 
 ## 16. Đoạn thuyết trình ngắn
 
-> Dữ liệu bắt đầu từ file `amazon_delivery.csv` gồm 43.739 bản ghi và 16 cột. Mage.ai ghi dữ liệu nguyên trạng vào `staging.raw_amazon_delivery`. dbt chuẩn hóa, tính trường dẫn xuất và phân loại lỗi cứng hoặc giá trị thiếu ở trường báo cáo. Các dòng đạt điều kiện tạo năm Dimension và `fact_delivery`; dòng vi phạm được ghi vào `delivery_rejections` để đối chiếu với raw. Kết quả hiện tại: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại; `dbt build` đạt 89/89 PASS.
+> Dữ liệu bắt đầu từ file `amazon_delivery.csv` gồm 43.739 bản ghi và 16 cột. Mage.ai ghi dữ liệu nguyên trạng vào `staging.raw_amazon_delivery`. dbt chuẩn hóa, tính trường dẫn xuất và phân loại lỗi cứng hoặc giá trị thiếu ở trường báo cáo. Các dòng đạt điều kiện tạo năm Dimension và `fact_delivery`; dòng vi phạm được ghi vào `delivery_rejections` để đối chiếu với raw. Kết quả hiện tại: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại; `dbt build` đạt 89 PASS, 1 WARN cho 145 dòng bị loại và 0 ERROR.
 
 ---
 
