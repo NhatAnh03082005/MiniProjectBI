@@ -287,6 +287,27 @@ table fact_delivery
 
 		annotation SummarizationSetBy = Automatic
 
+	column distance_outlier_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 6066400c-720e-424c-98d8-a4f6273bf7f6
+		summarizeBy: none
+		sourceColumn: distance_outlier_flag
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column distance_status
+		dataType: string
+		lineageTag: b66bc2f6-63a5-4bc3-bbaf-be3aca76ec53
+		summarizeBy: none
+		sourceColumn: distance_status
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
 	column distance_band
 		dataType: string
 		lineageTag: d8202ea2-3d3f-4a25-b2ac-cf3bbef3fc28

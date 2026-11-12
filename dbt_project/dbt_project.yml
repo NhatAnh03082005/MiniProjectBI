@@ -18,6 +18,8 @@ clean-targets:
 
 models:
   amazon_delivery_bi:
+    # The local SQL Server cannot grant enough memory to build columnstore indexes.
+    +as_columnstore: false
     +persist_docs:
       relation: true
       columns: true

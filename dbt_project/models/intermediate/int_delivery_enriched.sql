@@ -165,10 +165,19 @@ select
         end as decimal(10, 2)
     ) as pickup_delay_minutes,
     pickup_rollover_flag,
-    cast(case when delivery_distance_km_raw <= 50 then delivery_distance_km_raw end as float) as delivery_distance_km,
+    cast(delivery_distance_km_raw as float) as delivery_distance_km,
     cast(case when delivery_distance_km_raw <= 50 then 1 else 0 end as bit) as valid_distance_flag,
+    cast(case when delivery_distance_km_raw > 50 then 1 else 0 end as bit) as distance_outlier_flag,
     case
-        when delivery_distance_km_raw is null or delivery_distance_km_raw > 50 then 'Unknown'
+        when store_latitude = 0 and store_longitude = 0 then 'Store coordinates (0,0)'
+        when delivery_distance_km_raw is null then 'Not calculable'
+        when delivery_distance_km_raw > 50 then 'Outlier >50 km'
+        else 'Valid'
+    end as distance_status,
+    case
+        when store_latitude = 0 and store_longitude = 0 then 'Not calculable (Store 0,0)'
+        when delivery_distance_km_raw is null then 'Not calculable'
+        when delivery_distance_km_raw > 50 then '>50 km'
         when delivery_distance_km_raw < 5 then '[0,5) km'
         when delivery_distance_km_raw < 10 then '[5,10) km'
         when delivery_distance_km_raw < 15 then '[10,15) km'
@@ -178,7 +187,8 @@ select
     cast(1 as tinyint) as delivery_count,
     cast(
         case
-            when order_time is null or weather_name is null or traffic_level is null then 1
+            when order_time is null or weather_name is null or traffic_level is null
+                or upper(weather_name) = 'UNKNOWN' or upper(traffic_level) = 'UNKNOWN' then 1
             else 0
         end as bit
     ) as missing_operational_context_flag,

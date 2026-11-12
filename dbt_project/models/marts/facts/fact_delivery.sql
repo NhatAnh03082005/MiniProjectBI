@@ -3,7 +3,7 @@
 with enriched as (
 
     select *
-    from {{ ref('int_delivery_enriched') }}
+    from {{ ref('int_delivery_accepted') }}
     where order_id is not null
 
 ),
@@ -36,6 +36,8 @@ fact_rows as (
         enriched.pickup_rollover_flag,
         enriched.delivery_distance_km,
         enriched.valid_distance_flag,
+        enriched.distance_outlier_flag,
+        enriched.distance_status,
         enriched.distance_band,
         enriched.delivery_count,
         enriched.missing_operational_context_flag,

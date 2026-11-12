@@ -1,6 +1,24 @@
 version: 2
 
 models:
+  - name: delivery_rejections
+    description: Current hard validation failures, rebuilt from immutable raw data with each dbt run.
+    columns:
+      - name: staging_row_id
+        tests: [not_null]
+      - name: source_file_name
+        tests: [not_null]
+      - name: source_row_number
+        tests: [not_null]
+      - name: load_batch_id
+        tests: [not_null]
+      - name: column_name
+        tests: [not_null]
+      - name: error_code
+        tests: [not_null]
+      - name: expected_rule
+        tests: [not_null]
+
   - name: dim_date
     description: Static 2022 calendar dimension with Unknown Member key 0.
     columns:
@@ -46,9 +64,19 @@ models:
   - name: fact_delivery
     description: >
       One valid source delivery record per order_id, with five Dimension foreign
-      keys and 31 logical Data Contract fields. Repeated order_id resolution
+      keys and 33 logical Data Contract fields. Repeated order_id resolution
       across future batches remains pending LOAD-01.
     columns:
+      - name: delivery_distance_km
+        description: Calculated Haversine distance, including values above the 50 km analysis threshold.
+      - name: valid_distance_flag
+        description: One only when a calculable distance is at or below 50 km.
+      - name: distance_outlier_flag
+        description: One when the calculated distance exceeds 50 km.
+        tests: [not_null]
+      - name: distance_status
+        description: Explains whether the distance is valid, over 50 km, or not calculable.
+        tests: [not_null]
       - name: delivery_key
         tests: [not_null, unique]
       - name: order_id

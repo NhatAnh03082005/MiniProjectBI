@@ -40,14 +40,24 @@ dbt_project/
 └── tests/
 ```
 
-Lineage: `staging.raw_amazon_delivery` → `stg_amazon_delivery` → `int_delivery_enriched` → Dimension/Fact marts.
+Lineage: `staging.raw_amazon_delivery` → `stg_amazon_delivery` → `int_delivery_enriched` → `int_delivery_accepted` → Dimension/Fact marts. Hard-rule violations from staging also flow through `int_delivery_validation_errors` to `delivery_rejections`.
 
 - `models/staging/`: trim, null-normalization và `TRY_CONVERT`; không loại record thiếu, rating invalid hoặc outlier.
-- `models/intermediate/`: derived fields, quality flags, pickup rollover/delay, Haversine distance và analytical groups.
+- `models/intermediate/`: derived fields, quality flags, pickup rollover/delay, Haversine distance và analytical groups; phân loại vi phạm cứng trước DDS.
 - `models/marts/dimensions/`: năm Dimension semantic.
 - `models/marts/facts/`: Fact có một dòng cho một `order_id` hợp lệ theo Data Contract.
 - `macros/`: tạo/duy trì technical key-map cho surrogate key ổn định của Dimension phân loại. Đây là mã nguồn dbt, không phải output runtime.
 - `tests/`: singular tests; YAML tests nằm cùng model documentation.
+
+## Xử lý lỗi dữ liệu trước DDS
+
+`int_delivery_validation_errors` tạo một dòng cho mỗi cột vi phạm quy tắc cứng, giữ `staging_row_id`, lineage, giá trị raw, mã lỗi và quy tắc mong đợi. `delivery_rejections` materialize danh sách này thành bảng trạng thái hiện tại; bảng được dựng lại cùng Fact, không phải lịch sử các lần sửa lỗi. Dữ liệu gốc ở `staging.raw_amazon_delivery` không bị thay đổi.
+
+Các lỗi chặn DDS: giá trị thiếu ở 14 cột nguồn bắt buộc, gồm `Order_ID`, tuổi, rating, bốn tọa độ, ngày/giờ đặt, giờ lấy hàng, thời gian giao, Vehicle, Area và Category (`NULL`, chuỗi rỗng, `NAN`, `NULL` dạng chuỗi; thêm `Unknown` ở cột phân loại bắt buộc); `order_id` trùng sau trim; giá trị số/ngày/giờ không chuyển kiểu được; tuổi âm; rating ngoài 1–5; tọa độ ngoài phạm vi vĩ độ [-90,90] hoặc kinh độ [-180,180]; thời gian giao âm. Một dòng có nhiều cột lỗi có nhiều dòng trong bảng lỗi nhưng chỉ bị loại một lần khỏi Fact.
+
+Weather và Traffic thiếu được chuyển thành `Unknown` và không tự chặn DDS; `missing_operational_context_flag` ghi nhận việc thiếu ngữ cảnh này. `Order_Time` thiếu vẫn là lỗi chặn. Tuổi dưới 18, thời gian giao cao hơn 195/265 phút, tọa độ cửa hàng (0,0) và khoảng cách lớn hơn 50 km tiếp tục là cảnh báo như trước. Fact và Dimension phân loại cùng đọc `int_delivery_accepted`. Test đối soát kiểm tra số dòng raw bằng số dòng Fact cộng số `staging_row_id` bị loại riêng biệt.
+
+Khoảng cách Haversine tính được trên 50 km vẫn giữ nguyên trong `delivery_distance_km`, có `distance_outlier_flag = 1`, `distance_status = 'Outlier >50 km'` và `distance_band = '>50 km'`. `valid_distance_flag = 1` chỉ biểu thị khoảng cách tính được không quá 50 km, không quyết định dòng có vào Fact hay không. Nếu tọa độ Store là `(0,0)`, không có khoảng cách đáng tin cậy để công bố nên giá trị số vẫn `NULL`; `distance_status = 'Store coordinates (0,0)'` và `distance_band = 'Not calculable (Store 0,0)'` ghi rõ nguyên nhân. Biểu đồ khoảng cách của Power BI dùng các measure `Calculated Distance` để hiển thị cả nhóm trên 50 km; các measure `Valid Distance` chỉ dùng khi cần phân tích nhóm trong ngưỡng.
 
 ## Semantic models
 
@@ -66,6 +76,7 @@ Fact được phê duyệt: `fact_delivery`.
 ## Surrogate keys
 
 - `dim_date.date_key` là `YYYYMMDD`; Unknown Member dùng key `0`.
+- `dim_date` hiện chỉ sinh lịch năm 2022 theo phạm vi của dataset mẫu. Ngày hợp lệ ngoài 2022 không phải lỗi nguồn; cần mở rộng Dimension trước khi dùng dữ liệu năm khác để tránh lookup về key `0`.
 - Bốn Dimension phân loại dùng key-map kỹ thuật trong schema `dw`, có `IDENTITY` và Unknown Member key `0`.
 - Key-map không phải Dimension semantic hoặc nguồn cho Power BI; nó chỉ giữ natural key → surrogate key ổn định qua incremental load.
 - Khi chạy database thật, tài khoản dbt cần quyền tạo/quản lý các key-map technical tables trong `dw`.
@@ -88,6 +99,8 @@ Singular tests kiểm tra:
 - Age group và underage flag; không áp max age chưa được phê duyệt.
 - Pickup/missing-context/baseline-P90 flags.
 - Valid-distance rule và distance band.
+- Không bỏ sót lỗi chuyển kiểu trong bảng `delivery_rejections`; không để dòng bị loại vào Fact; đối soát raw, Fact và dòng bị loại.
+- Mọi trường nguồn bắt buộc, ngoại trừ Weather và Traffic được phép `Unknown`, đều có giá trị trên các dòng được nhận vào DDS.
 
 ## Cấu hình profile
 
@@ -110,8 +123,8 @@ Từ thư mục `dbt_project/`:
 
 ```powershell
 # Local environment in this workspace
- .\.python312\Scripts\dbt.exe --version
-.\.python312\Scripts\dbt.exe parse --profiles-dir .
+.\.venv\Scripts\dbt.exe --version
+.\.venv\Scripts\dbt.exe parse --profiles-dir .
 
 # Run by the integration owner after SQL Server and Mage are ready
 dbt debug
@@ -124,18 +137,11 @@ Dependencies được pin tại `requirements.txt`. Không commit `.python312/`,
 
 ## Validation status
 
-`dbt --version` và `dbt parse` đã được chạy trong môi trường cục bộ. Parse chỉ xác nhận cấu trúc project, Jinja, YAML và dependency graph; nó không truy vấn hay materialize model trong SQL Server.
-
-Chưa runtime-validate với database thật:
-
-- `dbt debug`, `dbt run`, `dbt test`, `dbt build`.
-- Quyền SQL Server, ODBC driver và profile thật.
-- Tạo key-map tables, materialize Dimension/Fact, FK lookup và row-count/KPI reconciliation.
-- Baseline tests trên 43.739 dòng sau Mage ingestion.
+Logic xử lý lỗi và khoảng cách mới đã qua `dbt build` trên SQL Server local. Build chạy 7 table models, 4 view models, 78 data tests và đạt `PASS=89, WARN=0, ERROR=0`. Đối soát: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại riêng biệt. Trong Fact, 39.958 dòng có khoảng cách không quá 50 km, 151 dòng có khoảng cách trên 50 km được giữ giá trị và gắn cờ, 3.485 dòng có tọa độ Store `(0,0)` nên không thể tính khoảng cách đáng tin cậy. Bảng lỗi có 54 lỗi rating thiếu, 91 lỗi giờ đặt thiếu và 53 lỗi rating ngoài 1–5; Weather/Traffic thiếu không còn là lý do loại. Cả 91 dòng thiếu Weather/Traffic hiện cũng thiếu `Order_Time`, nên số dòng Fact chưa đổi. Log cũ trong `evidence/final_etl/` có trước thay đổi này và không đại diện cho build mới.
 
 ## TODO và quyết định cần chốt
 
-1. `LOAD-01` phải chốt duplicate/rerun policy khi `order_id` lặp giữa batch. Code không tự chọn bản ghi để giữ; Fact unique test sẽ fail để báo lỗi.
+1. `LOAD-01` phải chốt duplicate/rerun policy khi `order_id` lặp giữa batch. Hiện tất cả dòng có `order_id` trùng sau trim đều bị loại, không tự chọn bản ghi để giữ.
 2. Trưởng nhóm xác nhận quyền dbt `CREATE TABLE`, `INSERT`, `MERGE` và `IDENTITY_INSERT` trong schema `dw` cho key-map technical tables.
 3. Tài liệu chưa chốt range nghiệp vụ min/max cho `agent_age`; code chỉ reject tuổi âm và vẫn giữ tuổi 15/50.
 4. Các boundary group và physical implementation được ghi Proposed trong MAP-01/Data Contract cần được trưởng nhóm xác nhận trước khi dùng làm chuẩn integration chính thức.
