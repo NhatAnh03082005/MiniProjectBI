@@ -53,9 +53,9 @@ Lineage: `staging.raw_amazon_delivery` → `stg_amazon_delivery` → `int_delive
 
 `int_delivery_validation_errors` tạo một dòng cho mỗi cột vi phạm quy tắc cứng, giữ `staging_row_id`, lineage, giá trị raw, mã lỗi và quy tắc mong đợi. `delivery_rejections` materialize danh sách này thành bảng trạng thái hiện tại; bảng được dựng lại cùng Fact, không phải lịch sử các lần sửa lỗi. Dữ liệu gốc ở `staging.raw_amazon_delivery` không bị thay đổi.
 
-Các lỗi chặn DDS: giá trị thiếu ở 14 cột nguồn bắt buộc, gồm `Order_ID`, tuổi, rating, bốn tọa độ, ngày/giờ đặt, giờ lấy hàng, thời gian giao, Vehicle, Area và Category (`NULL`, chuỗi rỗng, `NAN`, `NULL` dạng chuỗi; thêm `Unknown` ở cột phân loại bắt buộc); `order_id` trùng sau trim; giá trị số/ngày/giờ không chuyển kiểu được; tuổi âm; rating ngoài 1–5; tọa độ ngoài phạm vi vĩ độ [-90,90] hoặc kinh độ [-180,180]; thời gian giao âm. Một dòng có nhiều cột lỗi có nhiều dòng trong bảng lỗi nhưng chỉ bị loại một lần khỏi Fact.
+Các lỗi chặn DDS: giá trị thiếu ở 11 cột nguồn bắt buộc, gồm `Order_ID`, tuổi, rating, bốn tọa độ, ngày/giờ đặt, giờ lấy hàng và thời gian giao (`NULL`, chuỗi rỗng, `NAN`, `NULL` dạng chuỗi); `order_id` trùng sau trim; giá trị số/ngày/giờ không chuyển kiểu được; tuổi âm; rating ngoài 1–5; tọa độ ngoài phạm vi vĩ độ [-90,90] hoặc kinh độ [-180,180]; thời gian giao âm. Một dòng có nhiều cột lỗi có nhiều dòng trong bảng lỗi nhưng chỉ bị loại một lần khỏi Fact.
 
-Weather và Traffic thiếu được chuyển thành `Unknown` và không tự chặn DDS; `missing_operational_context_flag` ghi nhận việc thiếu ngữ cảnh này. `Order_Time` thiếu vẫn là lỗi chặn. Tuổi dưới 18, thời gian giao cao hơn 195/265 phút, tọa độ cửa hàng (0,0) và khoảng cách lớn hơn 50 km tiếp tục là cảnh báo như trước. Fact và Dimension phân loại cùng đọc `int_delivery_accepted`. Test đối soát kiểm tra số dòng raw bằng số dòng Fact cộng số `staging_row_id` bị loại riêng biệt.
+Weather, Traffic, Vehicle, Area và Category thiếu được chuyển thành `Unknown` và không tự chặn DDS. `missing_operational_context_flag` ghi nhận Weather/Traffic thiếu; ba cột phân loại còn lại tra vào Unknown Member của Dimension tương ứng. `Order_Time` thiếu vẫn là lỗi chặn. Tuổi dưới 18, thời gian giao cao hơn 195/265 phút, tọa độ cửa hàng (0,0) và khoảng cách lớn hơn 50 km tiếp tục là cảnh báo như trước. Fact và Dimension phân loại cùng đọc `int_delivery_accepted`. Test đối soát kiểm tra số dòng raw bằng số dòng Fact cộng số `staging_row_id` bị loại riêng biệt.
 
 Khoảng cách Haversine tính được trên 50 km vẫn giữ nguyên trong `delivery_distance_km`, có `distance_outlier_flag = 1`, `distance_status = 'Outlier >50 km'` và `distance_band = '>50 km'`. `valid_distance_flag = 1` chỉ biểu thị khoảng cách tính được không quá 50 km, không quyết định dòng có vào Fact hay không. Nếu tọa độ Store là `(0,0)`, không có khoảng cách đáng tin cậy để công bố nên giá trị số vẫn `NULL`; `distance_status = 'Store coordinates (0,0)'` và `distance_band = 'Not calculable (Store 0,0)'` ghi rõ nguyên nhân. Biểu đồ khoảng cách của Power BI dùng các measure `Calculated Distance` để hiển thị cả nhóm trên 50 km; các measure `Valid Distance` chỉ dùng khi cần phân tích nhóm trong ngưỡng.
 
@@ -100,7 +100,7 @@ Singular tests kiểm tra:
 - Pickup/missing-context/baseline-P90 flags.
 - Valid-distance rule và distance band.
 - Không bỏ sót lỗi chuyển kiểu trong bảng `delivery_rejections`; không để dòng bị loại vào Fact; đối soát raw, Fact và dòng bị loại.
-- Mọi trường nguồn bắt buộc, ngoại trừ Weather và Traffic được phép `Unknown`, đều có giá trị trên các dòng được nhận vào DDS.
+- Mười một trường nguồn bắt buộc đều có giá trị trên các dòng được nhận vào DDS; Weather, Traffic, Vehicle, Area và Category được phép `Unknown`.
 
 ## Cấu hình profile
 
@@ -137,7 +137,7 @@ Dependencies được pin tại `requirements.txt`. Không commit `.python312/`,
 
 ## Validation status
 
-Logic xử lý lỗi và khoảng cách mới đã qua `dbt build` trên SQL Server local. Build chạy 7 table models, 4 view models, 78 data tests và đạt `PASS=89, WARN=0, ERROR=0`. Đối soát: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại riêng biệt. Trong Fact, 39.958 dòng có khoảng cách không quá 50 km, 151 dòng có khoảng cách trên 50 km được giữ giá trị và gắn cờ, 3.485 dòng có tọa độ Store `(0,0)` nên không thể tính khoảng cách đáng tin cậy. Bảng lỗi có 54 lỗi rating thiếu, 91 lỗi giờ đặt thiếu và 53 lỗi rating ngoài 1–5; Weather/Traffic thiếu không còn là lý do loại. Cả 91 dòng thiếu Weather/Traffic hiện cũng thiếu `Order_Time`, nên số dòng Fact chưa đổi. Log cũ trong `evidence/final_etl/` có trước thay đổi này và không đại diện cho build mới.
+Logic xử lý lỗi, cột phân loại tùy chọn và khoảng cách mới đã qua `dbt build` trên SQL Server local. Build chạy 7 table models, 4 view models, 78 data tests và đạt `PASS=89, WARN=0, ERROR=0`. Đối soát: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại riêng biệt. Trong Fact, 39.958 dòng có khoảng cách không quá 50 km, 151 dòng có khoảng cách trên 50 km được giữ giá trị và gắn cờ, 3.485 dòng có tọa độ Store `(0,0)` nên không thể tính khoảng cách đáng tin cậy. Bảng lỗi có 54 lỗi rating thiếu, 91 lỗi giờ đặt thiếu và 53 lỗi rating ngoài 1–5. Weather, Traffic, Vehicle, Area và Category thiếu không tự chặn DDS; dữ liệu mẫu hiện không có dòng nào thiếu Vehicle, Area hoặc Category nên ba nhóm Unknown này chưa có trường hợp thực tế để đối soát. Cả 91 dòng thiếu Weather/Traffic hiện cũng thiếu `Order_Time`, nên số dòng Fact chưa đổi. Log cũ trong `evidence/final_etl/` có trước thay đổi này và không đại diện cho build mới.
 
 ## TODO và quyết định cần chốt
 

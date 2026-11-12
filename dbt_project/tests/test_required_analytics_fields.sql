@@ -1,4 +1,4 @@
--- Weather/Traffic may be Unknown; other reporting inputs are required.
+-- Descriptive categories may be Unknown; numerical and time inputs remain required.
 select accepted.staging_row_id
 from {{ ref('int_delivery_accepted') }} as accepted
 inner join {{ ref('stg_amazon_delivery') }} as staged
@@ -14,6 +14,9 @@ where accepted.order_id is null
    or accepted.order_time is null
    or accepted.pickup_time is null
    or accepted.delivery_time_minutes is null
-   or accepted.vehicle_type is null or upper(accepted.vehicle_type) = 'UNKNOWN'
-   or accepted.area_name is null or upper(accepted.area_name) = 'UNKNOWN'
-   or accepted.category_name is null or upper(accepted.category_name) = 'UNKNOWN'
+   or accepted.vehicle_type is null
+   or accepted.area_name is null
+   or accepted.category_name is null
+   or (staged.vehicle_type is null and accepted.vehicle_type <> 'Unknown')
+   or (staged.area_name is null and accepted.area_name <> 'Unknown')
+   or (staged.category_name is null and accepted.category_name <> 'Unknown')

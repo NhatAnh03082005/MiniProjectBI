@@ -48,14 +48,8 @@ checked as (
             'required valid time'),
         ('Pickup_Time', cast(r.Pickup_Time as nvarchar(4000)), cast(s.pickup_time as nvarchar(4000)),
             'required valid time'),
-        ('Vehicle', cast(r.Vehicle as nvarchar(4000)), cast(s.vehicle_type as nvarchar(4000)),
-            'required vehicle category'),
-        ('Area', cast(r.Area as nvarchar(4000)), cast(s.area_name as nvarchar(4000)),
-            'required area category'),
         ('Delivery_Time', cast(r.Delivery_Time as nvarchar(4000)), cast(s.delivery_time_minutes as nvarchar(4000)),
-            'required nonnegative decimal minutes'),
-        ('Category', cast(r.Category as nvarchar(4000)), cast(s.category_name as nvarchar(4000)),
-            'required delivery category')
+            'required nonnegative decimal minutes')
     ) as rules(column_name, raw_value, normalized_value, expected_rule)
     cross apply (values (
         case
@@ -64,8 +58,6 @@ checked as (
                 then case when rules.column_name = 'Order_ID' then 'MISSING_ORDER_ID'
                           else 'MISSING_VALUE' end
             when rules.normalized_value is null then 'INVALID_CAST'
-            when rules.column_name in ('Vehicle', 'Area', 'Category')
-                and upper(rules.normalized_value) = 'UNKNOWN' then 'MISSING_VALUE'
             when rules.column_name = 'Order_ID' and d.order_id is not null then 'DUPLICATE_ORDER_ID'
             when rules.column_name = 'Agent_Age' and s.agent_age < 0 then 'NEGATIVE_VALUE'
             when rules.column_name = 'Agent_Rating'

@@ -32,10 +32,15 @@ models:
           Business key for the baseline snapshot. Uniqueness across rerun or
           repeated batches cannot be tested until LOAD-01 defines a policy.
       - name: weather_name
+        description: Optional; missing source values become Unknown.
       - name: traffic_level
+        description: Optional; missing source values become Unknown.
       - name: vehicle_type
+        description: Optional; missing source values become Unknown and map to the vehicle Unknown Member.
       - name: area_name
+        description: Optional; missing source values become Unknown and map to the area Unknown Member.
       - name: category_name
+        description: Optional; missing source values become Unknown and map to the category Unknown Member.
       - name: pickup_delay_minutes
       - name: pickup_rollover_flag
       - name: delivery_distance_km

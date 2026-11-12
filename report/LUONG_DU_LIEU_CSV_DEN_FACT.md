@@ -361,7 +361,7 @@ Cùng một `Order_ID` luôn tạo cùng một `delivery_key`.
 
 ### 8.2. Chuẩn hóa giá trị phân loại thiếu
 
-Weather và Traffic thiếu được biểu diễn bằng `Unknown` và vẫn có thể vào Fact; cờ `missing_operational_context_flag` ghi nhận việc thiếu ngữ cảnh. Vehicle, Area và Category thiếu cũng thành `Unknown` ở intermediate, nhưng dòng đó được ghi vào `delivery_rejections` và không vào Fact.
+Weather, Traffic, Vehicle, Area và Category thiếu được biểu diễn bằng `Unknown` và vẫn có thể vào Fact nếu các trường bắt buộc khác hợp lệ. `missing_operational_context_flag` ghi nhận Weather/Traffic thiếu; Vehicle, Area và Category thiếu tra vào Unknown Member của Dimension tương ứng.
 
 ### 8.3. Tạo khung giờ
 
@@ -509,7 +509,7 @@ Từ dữ liệu đã chuẩn hóa, dbt tạo năm Dimension.
 
 ### 9.6. Surrogate key và Unknown Member
 
-Dimension sử dụng surrogate key số nguyên. Weather/Traffic thiếu có thể tạo tổ hợp `Unknown` trong `dim_delivery_condition`. Unknown Member key `0` là phương án dự phòng nếu lookup không được; dữ liệu nguồn thiếu ở các cột bắt buộc khác đã bị loại trước khi tạo Fact.
+Dimension sử dụng surrogate key số nguyên. Weather/Traffic thiếu có thể tạo tổ hợp `Unknown` trong `dim_delivery_condition`; Vehicle, Area và Category thiếu tra vào Unknown Member key `0` của Dimension tương ứng. Key `0` cũng là phương án dự phòng nếu lookup không được; dữ liệu nguồn thiếu ở 11 cột bắt buộc đã bị loại trước khi tạo Fact.
 
 Unknown Member giúp:
 
@@ -536,7 +536,7 @@ Với dữ liệu baseline:
 
 ### 10.2. Điều kiện đầu vào
 
-dbt chỉ đưa vào Fact các dòng không vi phạm quy tắc cứng và có đủ 14 cột nguồn bắt buộc. Weather và Traffic được phép thiếu, khi đó nhận `Unknown`; `Order_Time` thiếu vẫn bị loại. Lỗi chặn còn gồm chuyển kiểu thất bại, `order_id` trùng sau trim, tuổi âm, rating ngoài 1-5, tọa độ ngoài phạm vi và thời gian giao âm. Tuổi dưới 18, khoảng cách trên 50 km và ngoại lệ thống kê vẫn được giữ với cờ cảnh báo.
+dbt chỉ đưa vào Fact các dòng không vi phạm quy tắc cứng và có đủ 11 cột nguồn bắt buộc. Weather, Traffic, Vehicle, Area và Category được phép thiếu, khi đó nhận `Unknown`; `Order_Time` thiếu vẫn bị loại. Lỗi chặn còn gồm chuyển kiểu thất bại ở trường bắt buộc, `order_id` trùng sau trim, tuổi âm, rating ngoài 1-5, tọa độ ngoài phạm vi và thời gian giao âm. Tuổi dưới 18, khoảng cách trên 50 km và ngoại lệ thống kê vẫn được giữ với cờ cảnh báo.
 
 Model lấy dữ liệu chi tiết từ `int_delivery_accepted`, sau đó lookup năm Dimension để lấy:
 
@@ -681,6 +681,8 @@ Sau khi ETL hoàn thành, số dòng raw được chia thành Fact và bảng l�
 | Dòng raw bị loại riêng biệt | 145 |
 
 Bảng `dw.delivery_rejections` có một dòng cho mỗi cột vi phạm: 54 rating thiếu, 91 giờ đặt thiếu và 53 rating ngoài 1-5. Cả 91 dòng thiếu Weather/Traffic hiện cũng thiếu giờ đặt nên vẫn bị loại. Khi đối soát phải đếm 145 `staging_row_id` riêng biệt để không đếm trùng dòng raw có nhiều lỗi.
+
+Vehicle, Area và Category hiện được phép thiếu và sẽ nhận `Unknown` trong Fact, nhưng dữ liệu baseline không có dòng thiếu ba cột này; số dòng nêu trên vì vậy không thay đổi sau khi nới quy tắc.
 
 ---
 
