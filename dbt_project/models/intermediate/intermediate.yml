@@ -32,25 +32,25 @@ models:
           Business key for the baseline snapshot. Uniqueness across rerun or
           repeated batches cannot be tested until LOAD-01 defines a policy.
       - name: weather_name
-        description: Optional; missing source values become Unknown.
+        description: Missing source values become Unknown when the field is configured as optional.
       - name: traffic_level
-        description: Optional; missing source values become Unknown.
+        description: Missing source values become Unknown when the field is configured as optional.
       - name: vehicle_type
-        description: Optional; missing source values become Unknown and map to the vehicle Unknown Member.
+        description: Optional missing values become Unknown and map to the vehicle Unknown Member.
       - name: area_name
-        description: Optional; missing source values become Unknown and map to the area Unknown Member.
+        description: Optional missing values become Unknown and map to the area Unknown Member.
       - name: category_name
-        description: Optional; missing source values become Unknown and map to the category Unknown Member.
+        description: Optional missing values become Unknown and map to the category Unknown Member.
       - name: pickup_delay_minutes
       - name: pickup_rollover_flag
       - name: delivery_distance_km
-        description: Computed Haversine distance retained even when above the 50 km analysis threshold.
+        description: Computed Haversine distance retained even when above the configured analysis threshold.
       - name: valid_distance_flag
-        description: One only for calculable distances at or below 50 km.
+        description: One only for calculable distances at or below the configured threshold.
       - name: distance_outlier_flag
-        description: One when the calculated distance exceeds 50 km.
+        description: One when the calculated distance exceeds the configured threshold.
       - name: distance_status
-        description: Valid, over-50-km outlier, or reason distance could not be calculated.
+        description: Valid, above-threshold outlier, or reason distance could not be calculated.
       - name: valid_rating_flag
       - name: missing_operational_context_flag
       - name: source_file_name

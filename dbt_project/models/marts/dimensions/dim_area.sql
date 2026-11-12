@@ -15,7 +15,7 @@ select
     key_map.area_key,
     key_map.area_name
 from dw.dim_area_key_map as key_map
-where key_map.area_name = N'Unknown'
+where key_map.area_name = {{ delivery_sql_string(var('delivery_rules').unknown_label) }}
     or exists (
         select 1
         from {{ ref('int_delivery_accepted') }} as accepted

@@ -20,7 +20,7 @@ models:
         tests: [not_null]
 
   - name: dim_date
-    description: Static 2022 calendar dimension with Unknown Member key 0.
+    description: Calendar dimension over the configured date range with Unknown Member key 0.
     columns:
       - name: date_key
         tests: [not_null, unique]
@@ -68,14 +68,14 @@ models:
       across future batches remains pending LOAD-01.
     columns:
       - name: delivery_distance_km
-        description: Calculated Haversine distance, including values above the 50 km analysis threshold.
+        description: Calculated Haversine distance, including values above the configured analysis threshold.
       - name: valid_distance_flag
-        description: One only when a calculable distance is at or below 50 km.
+        description: One only when a calculable distance is at or below the configured threshold.
       - name: distance_outlier_flag
-        description: One when the calculated distance exceeds 50 km.
+        description: One when the calculated distance exceeds the configured threshold.
         tests: [not_null]
       - name: distance_status
-        description: Explains whether the distance is valid, over 50 km, or not calculable.
+        description: Explains whether the distance is valid, above the configured threshold, or not calculable.
         tests: [not_null]
       - name: delivery_key
         tests: [not_null, unique]

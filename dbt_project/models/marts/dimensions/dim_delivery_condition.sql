@@ -10,7 +10,8 @@ select
     key_map.weather_name,
     key_map.traffic_level
 from dw.dim_delivery_condition_key_map as key_map
-where (key_map.weather_name = N'Unknown' and key_map.traffic_level = N'Unknown')
+where (key_map.weather_name = {{ delivery_sql_string(var('delivery_rules').unknown_label) }}
+    and key_map.traffic_level = {{ delivery_sql_string(var('delivery_rules').unknown_label) }})
     or exists (
         select 1
         from {{ ref('int_delivery_accepted') }} as accepted

@@ -1,4 +1,5 @@
 {{ config(materialized='table') }}
+{% set rule_set = var('delivery_rules') %}
 
 with digits as (
 
@@ -16,10 +17,12 @@ numbers as (
     select
         ones.digit
         + tens.digit * 10
-        + hundreds.digit * 100 as day_number
+        + hundreds.digit * 100
+        + thousands.digit * 1000 as day_number
     from digits as ones
     cross join digits as tens
     cross join digits as hundreds
+    cross join digits as thousands
 
 ),
 
@@ -29,13 +32,13 @@ calendar as (
         dateadd(
             day,
             day_number,
-            cast('2022-01-01' as date)
+            cast({{ delivery_sql_string(rule_set.date_calendar.start) }} as date)
         ) as full_date
     from numbers
     where day_number <= datediff(
         day,
-        cast('2022-01-01' as date),
-        cast('2022-12-31' as date)
+        cast({{ delivery_sql_string(rule_set.date_calendar.start) }} as date),
+        cast({{ delivery_sql_string(rule_set.date_calendar.end) }} as date)
     )
 
 ),
@@ -69,11 +72,11 @@ select
     cast(0 as int) as date_key,
     cast(null as date) as full_date,
     cast(null as tinyint) as day_of_month,
-    'Unknown' as day_name,
+    {{ delivery_sql_string(rule_set.unknown_label) }} as day_name,
     cast(null as tinyint) as day_of_week_number,
     cast(null as tinyint) as week_of_year,
     cast(null as tinyint) as month_number,
-    'Unknown' as month_name,
+    {{ delivery_sql_string(rule_set.unknown_label) }} as month_name,
     cast(null as tinyint) as quarter_number,
     cast(null as smallint) as year
 

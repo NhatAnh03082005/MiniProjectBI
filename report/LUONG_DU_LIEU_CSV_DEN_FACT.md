@@ -347,7 +347,7 @@ Model này chưa tạo KPI tổng hợp và chưa loại các dòng bất thư�
 
 ## 8. Model `int_delivery_enriched`
 
-Đây là lớp áp dụng business rule và tạo dữ liệu phân tích. Model được materialize dưới dạng view.
+Đây là lớp áp dụng business rule và tạo dữ liệu phân tích. Model được materialize dưới dạng view. Các ngưỡng và nhãn đang nêu bên dưới là giá trị mặc định trong `vars.delivery_rules` của `dbt_project/dbt_project.yml`; khi sửa cấu hình, model và test cùng đọc giá trị mới.
 
 ### 8.1. Tạo khóa kỹ thuật
 
@@ -660,7 +660,7 @@ Kết quả runtime hiện có:
 7 table models
 4 view models
 79 data tests
-PASS = 89
+PASS = 90 (gồm 1 hook kiểm tra cấu hình)
 WARN = 1 (145 dòng raw bị loại)
 ERROR = 0
 SKIP = 0
@@ -736,7 +736,7 @@ Thiết kế này mang lại các lợi ích:
 
 ## 16. Đoạn thuyết trình ngắn
 
-> Dữ liệu bắt đầu từ file `amazon_delivery.csv` gồm 43.739 bản ghi và 16 cột. Mage.ai ghi dữ liệu nguyên trạng vào `staging.raw_amazon_delivery`. dbt chuẩn hóa, tính trường dẫn xuất và phân loại lỗi cứng hoặc giá trị thiếu ở trường báo cáo. Các dòng đạt điều kiện tạo năm Dimension và `fact_delivery`; dòng vi phạm được ghi vào `delivery_rejections` để đối chiếu với raw. Kết quả hiện tại: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại; `dbt build` đạt 89 PASS, 1 WARN cho 145 dòng bị loại và 0 ERROR.
+> Dữ liệu bắt đầu từ file `amazon_delivery.csv` gồm 43.739 bản ghi và 16 cột. Mage.ai ghi dữ liệu nguyên trạng vào `staging.raw_amazon_delivery`. dbt chuẩn hóa, tính trường dẫn xuất và phân loại lỗi cứng hoặc giá trị thiếu ở trường báo cáo theo `vars.delivery_rules`. Các dòng đạt điều kiện tạo năm Dimension và `fact_delivery`; dòng vi phạm được ghi vào `delivery_rejections` để đối chiếu với raw. Kết quả hiện tại: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại; `dbt build` đạt 90 PASS, 1 WARN cho 145 dòng bị loại và 0 ERROR.
 
 ---
 

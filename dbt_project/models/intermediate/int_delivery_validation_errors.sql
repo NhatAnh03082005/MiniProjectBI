@@ -1,13 +1,16 @@
 -- One row per missing, unparseable, or out-of-range required source value.
 -- Statistical outliers and underage agents remain warnings.
+{% set rules_config = var('delivery_rules') %}
+{% set business_key = (rules_config.fields | selectattr('unique') | list)[0] %}
+
 with staged as (
     select * from {{ ref('stg_amazon_delivery') }}
 ),
 duplicate_orders as (
-    select order_id
+    select {{ business_key.staged }}
     from staged
-    where order_id is not null
-    group by order_id
+    where {{ business_key.staged }} is not null
+    group by {{ business_key.staged }}
     having count(*) > 1
 ),
 checked as (
@@ -26,51 +29,40 @@ checked as (
     inner join {{ source('staging', 'raw_amazon_delivery') }} as r
         on s.staging_row_id = r.staging_row_id
     left join duplicate_orders as d
-        on s.order_id = d.order_id
+        on s.{{ business_key.staged }} = d.{{ business_key.staged }}
     cross apply (values
-        ('Order_ID', cast(r.Order_ID as nvarchar(4000)), cast(s.order_id as nvarchar(4000)),
-            'required unique order ID after trimming'),
-        ('Agent_Age', cast(r.Agent_Age as nvarchar(4000)), cast(s.agent_age as nvarchar(4000)),
-            'required nonnegative smallint'),
-        ('Agent_Rating', cast(r.Agent_Rating as nvarchar(4000)), cast(s.agent_rating_raw as nvarchar(4000)),
-            'required decimal rating between 1 and 5'),
-        ('Store_Latitude', cast(r.Store_Latitude as nvarchar(4000)), cast(s.store_latitude as nvarchar(4000)),
-            'required latitude between -90 and 90'),
-        ('Store_Longitude', cast(r.Store_Longitude as nvarchar(4000)), cast(s.store_longitude as nvarchar(4000)),
-            'required longitude between -180 and 180'),
-        ('Drop_Latitude', cast(r.Drop_Latitude as nvarchar(4000)), cast(s.drop_latitude as nvarchar(4000)),
-            'required latitude between -90 and 90'),
-        ('Drop_Longitude', cast(r.Drop_Longitude as nvarchar(4000)), cast(s.drop_longitude as nvarchar(4000)),
-            'required longitude between -180 and 180'),
-        ('Order_Date', cast(r.Order_Date as nvarchar(4000)), cast(s.order_date as nvarchar(4000)),
-            'required date parseable with SQL Server style 23'),
-        ('Order_Time', cast(r.Order_Time as nvarchar(4000)), cast(s.order_time as nvarchar(4000)),
-            'required valid time'),
-        ('Pickup_Time', cast(r.Pickup_Time as nvarchar(4000)), cast(s.pickup_time as nvarchar(4000)),
-            'required valid time'),
-        ('Delivery_Time', cast(r.Delivery_Time as nvarchar(4000)), cast(s.delivery_time_minutes as nvarchar(4000)),
-            'required nonnegative decimal minutes')
-    ) as rules(column_name, raw_value, normalized_value, expected_rule)
+        {% for field in rules_config.fields %}
+        {% set expected_rule = field.expected if field.required else field.expected | replace('required ', 'optional ') %}
+        ({{ delivery_sql_string(field.source) }}, cast(r.{{ field.source }} as nvarchar(4000)),
+            cast(s.{{ field.staged }} as nvarchar(4000)), {{ delivery_sql_string(expected_rule) }},
+            {{ delivery_sql_string(field.missing_error | default('MISSING_VALUE')) }},
+            {{ 1 if field.required else 0 }}){{ "," if not loop.last else "" }}
+        {% endfor %}
+    ) as rules(column_name, raw_value, normalized_value, expected_rule, missing_error, required_flag)
     cross apply (values (
         case
-            when rules.raw_value is null
-                or upper(ltrim(rtrim(rules.raw_value))) in ('', 'NAN', 'NULL')
-                then case when rules.column_name = 'Order_ID' then 'MISSING_ORDER_ID'
-                          else 'MISSING_VALUE' end
+            when {{ delivery_is_missing('rules.raw_value') }}
+                then case when rules.required_flag = 1 then rules.missing_error end
             when rules.normalized_value is null then 'INVALID_CAST'
-            when rules.column_name = 'Order_ID' and d.order_id is not null then 'DUPLICATE_ORDER_ID'
-            when rules.column_name = 'Agent_Age' and s.agent_age < 0 then 'NEGATIVE_VALUE'
-            when rules.column_name = 'Agent_Rating'
-                and (s.agent_rating_raw < 1 or s.agent_rating_raw > 5) then 'OUT_OF_RANGE'
-            when rules.column_name = 'Store_Latitude'
-                and (s.store_latitude < -90 or s.store_latitude > 90) then 'OUT_OF_RANGE'
-            when rules.column_name = 'Drop_Latitude'
-                and (s.drop_latitude < -90 or s.drop_latitude > 90) then 'OUT_OF_RANGE'
-            when rules.column_name = 'Store_Longitude'
-                and (s.store_longitude < -180 or s.store_longitude > 180) then 'OUT_OF_RANGE'
-            when rules.column_name = 'Drop_Longitude'
-                and (s.drop_longitude < -180 or s.drop_longitude > 180) then 'OUT_OF_RANGE'
-            when rules.column_name = 'Delivery_Time' and s.delivery_time_minutes < 0 then 'NEGATIVE_VALUE'
+            {% for field in rules_config.fields %}
+            {% if field.required and field.unknown_if_missing | default(false) %}
+            when rules.column_name = {{ delivery_sql_string(field.source) }}
+                and upper(rules.normalized_value) = upper({{ delivery_sql_string(rules_config.unknown_label) }})
+                then 'MISSING_VALUE'
+            {% endif %}
+            {% if field.unique | default(false) %}
+            when rules.column_name = {{ delivery_sql_string(field.source) }}
+                and d.{{ business_key.staged }} is not null then 'DUPLICATE_ORDER_ID'
+            {% endif %}
+            {% if field.range is defined %}
+            {% set bounds = rules_config.ranges[field.range] %}
+            when rules.column_name = {{ delivery_sql_string(field.source) }} and (
+                {% if bounds.min is not none %}s.{{ field.staged }} < {{ bounds.min }}{% endif %}
+                {% if bounds.min is not none and bounds.max is not none %}or{% endif %}
+                {% if bounds.max is not none %}s.{{ field.staged }} > {{ bounds.max }}{% endif %}
+            ) then {{ delivery_sql_string(bounds.error_code) }}
+            {% endif %}
+            {% endfor %}
         end
     )) as validation(error_code)
     where validation.error_code is not null

@@ -1,3 +1,7 @@
+{% set rule_set = var('delivery_rules') %}
+{% set rating_range = rule_set.ranges.agent_rating %}
+{% set distance_rule = rule_set.distance %}
+
 with staged as (
 
     select *
@@ -19,33 +23,33 @@ categorized as (
 
     select
         *,
-        coalesce(weather_name, 'Unknown') as weather_name_normalized,
-        coalesce(traffic_level, 'Unknown') as traffic_level_normalized,
-        coalesce(vehicle_type, 'Unknown') as vehicle_type_normalized,
-        coalesce(area_name, 'Unknown') as area_name_normalized,
-        coalesce(category_name, 'Unknown') as category_name_normalized,
+        {% for field in rule_set.fields %}
+        {% if field.unknown_if_missing | default(false) %}
+        coalesce({{ field.staged }}, {{ delivery_sql_string(rule_set.unknown_label) }}) as {{ field.normalized }},
+        {% endif %}
+        {% endfor %}
         case
-            when order_time is null then 'Unknown'
-            when datepart(hour, order_time) < 6 then 'Night'
-            when datepart(hour, order_time) < 12 then 'Morning'
-            when datepart(hour, order_time) < 18 then 'Afternoon'
-            else 'Evening'
+            when order_time is null then {{ delivery_sql_string(rule_set.unknown_label) }}
+            {% for period in rule_set.time_periods %}
+            when datepart(hour, order_time) < {{ period.upper_exclusive_hour }} then {{ delivery_sql_string(period.label) }}
+            {% endfor %}
+            else {{ delivery_sql_string(rule_set.time_period_else) }}
         end as time_period,
         case
-            when agent_age is null then 'Unknown'
-            when agent_age < 18 then 'Under 18'
-            when agent_age < 25 then '18-24'
-            when agent_age < 35 then '25-34'
-            when agent_age < 45 then '35-44'
-            else '45+'
+            when agent_age is null then {{ delivery_sql_string(rule_set.unknown_label) }}
+            {% for age_group in rule_set.age_groups %}
+            when agent_age < {{ age_group.upper_exclusive }} then {{ delivery_sql_string(age_group.label) }}
+            {% endfor %}
+            else {{ delivery_sql_string(rule_set.age_group_else) }}
         end as age_group,
         case
-            when agent_rating_raw is null then 'Unknown'
-            when agent_rating_raw < 1 or agent_rating_raw > 5 then 'Invalid'
-            when agent_rating_raw < 3 then '[1,3)'
-            when agent_rating_raw < 4 then '[3,4)'
-            when agent_rating_raw < 4.5 then '[4,4.5)'
-            else '[4.5,5]'
+            when agent_rating_raw is null then {{ delivery_sql_string(rule_set.unknown_label) }}
+            when agent_rating_raw < {{ rating_range.min }} or agent_rating_raw > {{ rating_range.max }}
+                then {{ delivery_sql_string(rule_set.invalid_rating_label) }}
+            {% for rating_group in rule_set.rating_groups %}
+            when agent_rating_raw < {{ rating_group.upper_exclusive }} then {{ delivery_sql_string(rating_group.label) }}
+            {% endfor %}
+            else {{ delivery_sql_string(rule_set.rating_group_else) }}
         end as rating_group,
         case
             when order_date is not null and order_time is not null then
@@ -82,11 +86,12 @@ distance_input as (
     select
         *,
         case
-            when store_latitude between -90 and 90
-                and drop_latitude between -90 and 90
-                and store_longitude between -180 and 180
-                and drop_longitude between -180 and 180
-                and not (store_latitude = 0 and store_longitude = 0)
+            when store_latitude between {{ rule_set.ranges.latitude.min }} and {{ rule_set.ranges.latitude.max }}
+                and drop_latitude between {{ rule_set.ranges.latitude.min }} and {{ rule_set.ranges.latitude.max }}
+                and store_longitude between {{ rule_set.ranges.longitude.min }} and {{ rule_set.ranges.longitude.max }}
+                and drop_longitude between {{ rule_set.ranges.longitude.min }} and {{ rule_set.ranges.longitude.max }}
+                and not (store_latitude = {{ distance_rule.invalid_store_latitude }}
+                    and store_longitude = {{ distance_rule.invalid_store_longitude }})
             then
                 power(sin(radians(drop_latitude - store_latitude) / 2.0), 2)
                 + cos(radians(store_latitude)) * cos(radians(drop_latitude))
@@ -115,7 +120,7 @@ distance_enriched as (
     select
         *,
         case
-            when haversine_a_clamped is not null then 2.0 * 6371.0 * asin(sqrt(haversine_a_clamped))
+            when haversine_a_clamped is not null then 2.0 * {{ distance_rule.earth_radius_km }} * asin(sqrt(haversine_a_clamped))
         end as delivery_distance_km_raw
     from distance_calculated
 
@@ -132,11 +137,11 @@ select
     time_period,
     agent_age,
     age_group,
-    cast(case when agent_age < 18 then 1 else 0 end as bit) as underage_agent_flag,
+    cast(case when agent_age < {{ rule_set.age_groups[0].upper_exclusive }} then 1 else 0 end as bit) as underage_agent_flag,
     agent_rating_raw,
-    cast(case when agent_rating_raw between 1 and 5 then agent_rating_raw end as decimal(4, 2)) as agent_rating_valid,
+    cast(case when agent_rating_raw between {{ rating_range.min }} and {{ rating_range.max }} then agent_rating_raw end as decimal(4, 2)) as agent_rating_valid,
     rating_group,
-    cast(case when agent_rating_raw between 1 and 5 then 1 else 0 end as bit) as valid_rating_flag,
+    cast(case when agent_rating_raw between {{ rating_range.min }} and {{ rating_range.max }} then 1 else 0 end as bit) as valid_rating_flag,
     weather_name_normalized as weather_name,
     traffic_level_normalized as traffic_level,
     vehicle_type_normalized as vehicle_type,
@@ -147,14 +152,15 @@ select
     cast(
         case
             when delivery_time_minutes is null then null
-            when delivery_time_minutes > 195 then 1
+            when delivery_time_minutes > {{ rule_set.baseline_p90_minutes }} then 1
             else 0
         end as bit
     ) as above_baseline_p90_flag,
     cast(
         case
             when delivery_time_minutes is null then null
-            when delivery_time_minutes < -15 or delivery_time_minutes > 265 then 1
+            when delivery_time_minutes < {{ rule_set.delivery_time_iqr.lower_minutes }}
+                or delivery_time_minutes > {{ rule_set.delivery_time_iqr.upper_minutes }} then 1
             else 0
         end as bit
     ) as delivery_time_iqr_outlier_flag,
@@ -166,29 +172,39 @@ select
     ) as pickup_delay_minutes,
     pickup_rollover_flag,
     cast(delivery_distance_km_raw as float) as delivery_distance_km,
-    cast(case when delivery_distance_km_raw <= 50 then 1 else 0 end as bit) as valid_distance_flag,
-    cast(case when delivery_distance_km_raw > 50 then 1 else 0 end as bit) as distance_outlier_flag,
+    cast(case when delivery_distance_km_raw <= {{ distance_rule.max_valid_km }} then 1 else 0 end as bit) as valid_distance_flag,
+    cast(case when delivery_distance_km_raw > {{ distance_rule.max_valid_km }} then 1 else 0 end as bit) as distance_outlier_flag,
     case
-        when store_latitude = 0 and store_longitude = 0 then 'Store coordinates (0,0)'
-        when delivery_distance_km_raw is null then 'Not calculable'
-        when delivery_distance_km_raw > 50 then 'Outlier >50 km'
-        else 'Valid'
+        when store_latitude = {{ distance_rule.invalid_store_latitude }}
+            and store_longitude = {{ distance_rule.invalid_store_longitude }}
+            then {{ delivery_sql_string(distance_rule.status_invalid_store) }}
+        when delivery_distance_km_raw is null then {{ delivery_sql_string(distance_rule.status_not_calculable) }}
+        when delivery_distance_km_raw > {{ distance_rule.max_valid_km }} then {{ delivery_distance_label(distance_rule.status_outlier, distance_rule) }}
+        else {{ delivery_sql_string(distance_rule.status_valid) }}
     end as distance_status,
     case
-        when store_latitude = 0 and store_longitude = 0 then 'Not calculable (Store 0,0)'
-        when delivery_distance_km_raw is null then 'Not calculable'
-        when delivery_distance_km_raw > 50 then '>50 km'
-        when delivery_distance_km_raw < 5 then '[0,5) km'
-        when delivery_distance_km_raw < 10 then '[5,10) km'
-        when delivery_distance_km_raw < 15 then '[10,15) km'
-        when delivery_distance_km_raw < 20 then '[15,20) km'
-        else '[20,50] km'
+        when store_latitude = {{ distance_rule.invalid_store_latitude }}
+            and store_longitude = {{ distance_rule.invalid_store_longitude }}
+            then {{ delivery_sql_string(distance_rule.band_invalid_store) }}
+        when delivery_distance_km_raw is null then {{ delivery_sql_string(distance_rule.band_not_calculable) }}
+        when delivery_distance_km_raw > {{ distance_rule.max_valid_km }} then {{ delivery_distance_label(distance_rule.band_outlier, distance_rule) }}
+        {% for band in distance_rule.bands %}
+        when delivery_distance_km_raw < {{ band.upper_exclusive_km }} then {{ delivery_sql_string(band.label) }}
+        {% endfor %}
+        else {{ delivery_distance_label(distance_rule.band_else, distance_rule) }}
     end as distance_band,
     cast(1 as tinyint) as delivery_count,
     cast(
         case
-            when order_time is null or weather_name is null or traffic_level is null
-                or upper(weather_name) = 'UNKNOWN' or upper(traffic_level) = 'UNKNOWN' then 1
+            when
+                {% for context_field in rule_set.operational_context_fields %}
+                {{ context_field.staged }} is null
+                {% if context_field.unknown_is_missing %}
+                or upper({{ context_field.staged }}) = upper({{ delivery_sql_string(rule_set.unknown_label) }})
+                {% endif %}
+                {{ "or" if not loop.last else "" }}
+                {% endfor %}
+            then 1
             else 0
         end as bit
     ) as missing_operational_context_flag,

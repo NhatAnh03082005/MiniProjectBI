@@ -32,7 +32,7 @@ models:
       - name: area_name_raw
         description: Trimmed source area, retained for technical lineage.
       - name: area_name
-        description: Area normalized only for the approved Metropolitian correction.
+        description: Area normalized using the configured area_aliases mapping.
       - name: delivery_time_minutes
         description: Parsed delivery duration; no outlier is removed at staging.
       - name: category_name

@@ -15,7 +15,7 @@ select
     key_map.vehicle_key,
     key_map.vehicle_type
 from dw.dim_vehicle_key_map as key_map
-where key_map.vehicle_type = N'Unknown'
+where key_map.vehicle_type = {{ delivery_sql_string(var('delivery_rules').unknown_label) }}
     or exists (
         select 1
         from {{ ref('int_delivery_accepted') }} as accepted

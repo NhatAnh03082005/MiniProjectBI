@@ -27,8 +27,8 @@
                 }
               },
               "queryRef": "_Measures.Above Baseline P90 Count",
-              "nativeQueryRef": "Above 195 min",
-              "displayName": "Above 195 min"
+              "nativeQueryRef": "Above baseline",
+              "displayName": "Above baseline"
             },
             {
               "field": {
@@ -42,8 +42,8 @@
                 }
               },
               "queryRef": "_Measures.At or Below Baseline P90 Count",
-              "nativeQueryRef": "195 min or less",
-              "displayName": "195 min or less"
+              "nativeQueryRef": "At or below baseline",
+              "displayName": "At or below baseline"
             }
           ]
         }
@@ -280,7 +280,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Fixed baseline: >195 min • Not an SLA'"
+                  "Value": "'Configured baseline flag • Not an SLA'"
                 }
               }
             },

@@ -316,7 +316,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Calculated distance including >50 km outliers; bubble size = records'"
+                  "Value": "'Calculated distance including flagged outliers; bubble size = records'"
                 }
               }
             },

@@ -46,14 +46,29 @@ Lineage: `staging.raw_amazon_delivery` → `stg_amazon_delivery` → `int_delive
 - `models/intermediate/`: derived fields, quality flags, pickup rollover/delay, Haversine distance và analytical groups; phân loại vi phạm cứng trước DDS.
 - `models/marts/dimensions/`: năm Dimension semantic.
 - `models/marts/facts/`: Fact có một dòng cho một `order_id` hợp lệ theo Data Contract.
-- `macros/`: tạo/duy trì technical key-map cho surrogate key ổn định của Dimension phân loại. Đây là mã nguồn dbt, không phải output runtime.
+- `macros/`: chuẩn hóa giá trị thiếu, kiểm tra cấu hình quy tắc và tạo/duy trì technical key-map cho surrogate key ổn định của Dimension phân loại.
 - `tests/`: singular tests; YAML tests nằm cùng model documentation.
+
+## Thay đổi quy tắc xử lý
+
+Các giá trị nghiệp vụ nằm tập trung trong `vars.delivery_rules` của `dbt_project.yml` (phiên bản dbt local hiện là 1.10). Model và test đọc bằng `var('delivery_rules')`; không cần sửa nhiều file SQL khi đổi ngưỡng hoặc trạng thái bắt buộc của một cột nguồn.
+
+| Mục cấu hình | Thay đổi được |
+|---|---|
+| `fields[].required` | `true`: thiếu thì reject; `false`: được phép thiếu. `Order_ID` phải giữ bắt buộc và duy nhất để bảo vệ grain Fact. |
+| `fields[].range`, `ranges` | Khoảng tuổi, rating, tọa độ và thời gian giao; giá trị có mặt nhưng chuyển kiểu lỗi hoặc ngoài khoảng vẫn reject kể cả khi cột được phép thiếu. |
+| `missing_tokens`, `unknown_label`, `area_aliases` | Chuỗi coi là thiếu, nhãn cho phân loại thiếu và các tên Area được chuẩn hóa. |
+| `age_groups`, `rating_groups`, `time_periods`, `distance.bands` | Ranh giới và nhãn của nhóm phân tích. |
+| `baseline_p90_minutes`, `delivery_time_iqr`, `distance` | Ngưỡng cờ cảnh báo, ngưỡng khoảng cách, bán kính Trái Đất và trạng thái khoảng cách. |
+| `date_calendar`, `date_parse_style`, `reject_warning_severity` | Khoảng lịch, kiểu parse ngày và mức cảnh báo dòng bị loại. |
+
+Ví dụ: để Weather trở thành cột bắt buộc, đổi `required: false` thành `required: true` ở dòng `source: Weather`; để đổi ngưỡng khoảng cách, sửa `distance.max_valid_km`. Các nhãn khoảng cách chứa `{max_valid_km}` tự lấy ngưỡng mới; nếu đổi ranh giới `distance.bands`, hãy sửa các nhãn nhóm tương ứng. Sau mỗi thay đổi, chạy `dbt compile --profiles-dir .` rồi `dbt build --profiles-dir .` và so sánh số dòng Fact/reject, các nhóm và cờ cảnh báo. Cấu hình sai thứ tự min/max hoặc ranh giới nhóm làm build dừng ngay. Kiểu dữ liệu đích, khóa Fact và công thức Haversine là cấu trúc xử lý SQL, vẫn ở model/macro. Nếu đổi `unknown_label` sau khi đã nạp, key-map kỹ thuật cập nhật Unknown Member key `0`; trường hợp nhãn mới đã thuộc một key khác sẽ báo lỗi để xử lý xung đột.
 
 ## Xử lý lỗi dữ liệu trước DDS
 
 `int_delivery_validation_errors` tạo một dòng cho mỗi cột vi phạm quy tắc cứng, giữ `staging_row_id`, lineage, giá trị raw, mã lỗi và quy tắc mong đợi. `delivery_rejections` materialize danh sách này thành bảng trạng thái hiện tại; bảng được dựng lại cùng Fact, không phải lịch sử các lần sửa lỗi. Dữ liệu gốc ở `staging.raw_amazon_delivery` không bị thay đổi.
 
-Các lỗi chặn DDS: giá trị thiếu ở 11 cột nguồn bắt buộc, gồm `Order_ID`, tuổi, rating, bốn tọa độ, ngày/giờ đặt, giờ lấy hàng và thời gian giao (`NULL`, chuỗi rỗng, `NAN`, `NULL` dạng chuỗi); `order_id` trùng sau trim; giá trị số/ngày/giờ không chuyển kiểu được; tuổi âm; rating ngoài 1–5; tọa độ ngoài phạm vi vĩ độ [-90,90] hoặc kinh độ [-180,180]; thời gian giao âm. Một dòng có nhiều cột lỗi có nhiều dòng trong bảng lỗi nhưng chỉ bị loại một lần khỏi Fact.
+Theo cấu hình mặc định, các lỗi chặn DDS gồm: giá trị thiếu ở 11 cột nguồn bắt buộc (`Order_ID`, tuổi, rating, bốn tọa độ, ngày/giờ đặt, giờ lấy hàng và thời gian giao; kể cả `NULL`, chuỗi rỗng, `NAN`, `NULL` dạng chuỗi); `order_id` trùng sau trim; giá trị số/ngày/giờ không chuyển kiểu được; tuổi âm; rating ngoài 1–5; tọa độ ngoài phạm vi vĩ độ [-90,90] hoặc kinh độ [-180,180]; thời gian giao âm. Một dòng có nhiều cột lỗi có nhiều dòng trong bảng lỗi nhưng chỉ bị loại một lần khỏi Fact.
 
 Weather, Traffic, Vehicle, Area và Category thiếu được chuyển thành `Unknown` và không tự chặn DDS. `missing_operational_context_flag` ghi nhận Weather/Traffic thiếu; ba cột phân loại còn lại tra vào Unknown Member của Dimension tương ứng. `Order_Time` thiếu vẫn là lỗi chặn. Tuổi dưới 18, thời gian giao cao hơn 195/265 phút, tọa độ cửa hàng (0,0) và khoảng cách lớn hơn 50 km tiếp tục là cảnh báo như trước. Fact và Dimension phân loại cùng đọc `int_delivery_accepted`. Test đối soát kiểm tra số dòng raw bằng số dòng Fact cộng số `staging_row_id` bị loại riêng biệt.
 
@@ -71,12 +86,12 @@ Năm Dimension được phê duyệt:
 
 Fact được phê duyệt: `fact_delivery`.
 
-`fact_delivery` chỉ công bố 31 trường logic của Data Contract, giữ năm foreign key, business key `order_id`, `delivery_key`, measures, quality flags và lineage. Fact không chứa exact coordinates, aggregate KPI, SLA hoặc late flag.
+`fact_delivery` công bố 33 trường logic của Data Contract, giữ năm foreign key, business key `order_id`, `delivery_key`, measures, quality flags và lineage. Fact không chứa exact coordinates, aggregate KPI, SLA hoặc late flag.
 
 ## Surrogate keys
 
 - `dim_date.date_key` là `YYYYMMDD`; Unknown Member dùng key `0`.
-- `dim_date` hiện chỉ sinh lịch năm 2022 theo phạm vi của dataset mẫu. Ngày hợp lệ ngoài 2022 không phải lỗi nguồn; cần mở rộng Dimension trước khi dùng dữ liệu năm khác để tránh lookup về key `0`.
+- `dim_date` mặc định sinh lịch năm 2022 theo `date_calendar`. Ngày hợp lệ ngoài khoảng cấu hình không phải lỗi nguồn; mở rộng khoảng lịch trong cấu hình trước khi dùng dữ liệu năm khác để tránh lookup về key `0`.
 - Bốn Dimension phân loại dùng key-map kỹ thuật trong schema `dw`, có `IDENTITY` và Unknown Member key `0`.
 - Key-map không phải Dimension semantic hoặc nguồn cho Power BI; nó chỉ giữ natural key → surrogate key ổn định qua incremental load.
 - Khi chạy database thật, tài khoản dbt cần quyền tạo/quản lý các key-map technical tables trong `dw`.
@@ -94,8 +109,8 @@ Singular tests kiểm tra:
 
 - Grain Fact một dòng mỗi `order_id`.
 - Lỗi chuyển kiểu raw → staging.
-- Rating valid 1–5, nhưng vẫn cho phép rating null.
-- Delivery time không âm, nhưng vẫn cho phép null.
+- Rating theo khoảng cấu hình; thiếu rating bị reject theo `fields[].required` mặc định.
+- Delivery time theo khoảng cấu hình; thiếu thời gian giao bị reject theo `fields[].required` mặc định.
 - Age group và underage flag; không áp max age chưa được phê duyệt.
 - Pickup/missing-context/baseline-P90 flags.
 - Valid-distance rule và distance band.
@@ -138,7 +153,7 @@ Dependencies được pin tại `requirements.txt`. Không commit `.python312/`,
 
 ## Validation status
 
-Logic xử lý lỗi, cột phân loại tùy chọn và khoảng cách mới đã qua `dbt build` trên SQL Server local. Build chạy 7 table models, 4 view models, 79 data tests và đạt `PASS=89, WARN=1, ERROR=0`. Cảnh báo `warn_rejected_delivery_rows` ghi `Got 145 results`; mỗi kết quả là một `staging_row_id` bị loại, không phải một cột lỗi. Đối soát: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại riêng biệt. Trong Fact, 39.958 dòng có khoảng cách không quá 50 km, 151 dòng có khoảng cách trên 50 km được giữ giá trị và gắn cờ, 3.485 dòng có tọa độ Store `(0,0)` nên không thể tính khoảng cách đáng tin cậy. Bảng lỗi có 54 lỗi rating thiếu, 91 lỗi giờ đặt thiếu và 53 lỗi rating ngoài 1–5. Weather, Traffic, Vehicle, Area và Category thiếu không tự chặn DDS; dữ liệu mẫu hiện không có dòng nào thiếu Vehicle, Area hoặc Category nên ba nhóm Unknown này chưa có trường hợp thực tế để đối soát. Cả 91 dòng thiếu Weather/Traffic hiện cũng thiếu `Order_Time`, nên số dòng Fact chưa đổi. Log cũ trong `evidence/final_etl/` có trước thay đổi này và không đại diện cho build mới.
+Logic xử lý lỗi, cột phân loại tùy chọn và khoảng cách đã qua `dbt build` trên SQL Server local sau khi chuyển quy tắc vào `vars.delivery_rules`. Build chạy một hook kiểm tra cấu hình, 7 table models, 4 view models, 79 data tests và đạt `PASS=90, WARN=1, ERROR=0`. Cảnh báo `warn_rejected_delivery_rows` ghi `Got 145 results`; mỗi kết quả là một `staging_row_id` bị loại, không phải một cột lỗi. Đối soát: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại riêng biệt. Trong Fact, 39.958 dòng có khoảng cách không quá 50 km, 151 dòng có khoảng cách trên 50 km được giữ giá trị và gắn cờ, 3.485 dòng có tọa độ Store `(0,0)` nên không thể tính khoảng cách đáng tin cậy. Bảng lỗi có 54 lỗi rating thiếu, 91 lỗi giờ đặt thiếu và 53 lỗi rating ngoài 1–5. Weather, Traffic, Vehicle, Area và Category thiếu không tự chặn DDS; dữ liệu mẫu hiện không có dòng nào thiếu Vehicle, Area hoặc Category nên ba nhóm Unknown này chưa có trường hợp thực tế để đối soát. Cả 91 dòng thiếu Weather/Traffic hiện cũng thiếu `Order_Time`, nên số dòng Fact chưa đổi. Đã compile thử với ngưỡng khoảng cách 40 km và Weather bắt buộc qua `--vars` để xác nhận model/test sinh SQL theo cấu hình, rồi trả lại cấu hình mặc định. Log cũ trong `evidence/final_etl/` có trước thay đổi này và không đại diện cho build mới.
 
 ## TODO và quyết định cần chốt
 
