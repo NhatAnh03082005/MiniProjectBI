@@ -15,7 +15,7 @@ cultureInfo en-US
 			      "State": "Generated",
 			      "Terms": [
 			        {
-          "Above baseline": {
+			          "Above 195 min": {
 			            "State": "Suggested",
 			            "Source": {
 			              "Type": "External",
@@ -36,7 +36,7 @@ cultureInfo en-US
 			      "State": "Generated",
 			      "Terms": [
 			        {
-          "At or below baseline": {
+			          "195 min or less": {
 			            "State": "Suggested",
 			            "Source": {
 			              "Type": "External",
