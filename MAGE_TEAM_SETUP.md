@@ -1,142 +1,97 @@
-# Mage.ai team setup
+# Mage team setup
 
-## 1. Yêu cầu
+## Yêu cầu
 
-- Python 3.11.
-- SQL Server và SQL Server Management Studio (SSMS).
-- Microsoft ODBC Driver 18 for SQL Server.
-- Repository đầy đủ, đặc biệt là `data/`, `sql/` và `mage_project/`.
+- Python 3.11 và môi trường `.venv`.
+- SQL Server, `sqlcmd` hoặc SSMS.
+- Microsoft ODBC Driver 17/18.
+- Repository đầy đủ gồm `data`, `sql`, `mage_project`.
 
-## 2. Tạo môi trường Python
+## SQL migration
 
-Chạy từ root repository:
+Từ thư mục `sql`, chọn đúng database cần triển khai:
 
 ```powershell
-py -3.11 -m venv .venv
-& ".\.venv\Scripts\Activate.ps1"
-python -m pip install --upgrade pip
-python -m pip install mage-ai==0.9.80 pyodbc pandas
+# Database chính: AmazonDeliveryBI
+sqlcmd -S localhost -E -C -b -i run_sql_skeleton.sql
+
+# Database demo: AmazonDeliveryBI_Demo
+sqlcmd -S localhost -E -C -b -i run_sql_skeleton_demo.sql
 ```
 
-`.venv/` là môi trường cục bộ và không được commit.
+Nếu dùng SSMS, mở đúng một file tổng rồi Execute; không cần SQLCMD Mode.
+Script giữ dữ liệu hiện có, bổ sung hash/update metadata và action counters.
 
-## 3. Khởi tạo SQL skeleton
+## Môi trường Mage
 
-Trong SSMS, kết nối đúng SQL Server instance, mở `sql/run_sql_skeleton.sql` và chọn **Execute** một lần. Kiểm tra phần Messages và các result set validation ở cuối file.
-
-## 4. Xác nhận Mage project
-
-Mage project dùng trực tiếp thư mục `mage_project` trong repository. Không tạo junction, symlink hoặc thư mục trung gian.
+Từ root repository:
 
 ```powershell
-$ProjectRoot = (Resolve-Path ".").Path
-$MageProject = Join-Path $ProjectRoot "mage_project"
-
-Test-Path (Join-Path $MageProject "metadata.yaml")
-Test-Path (Join-Path $MageProject "pipelines\test_sql_server_connection\metadata.yaml")
-```
-
-Hai lệnh kiểm tra phải trả về `True`.
-
-## 5. Đặt biến môi trường
-
-Các biến này chỉ có hiệu lực trong PowerShell hiện tại. Thay giá trị server bằng instance của người chạy.
-
-```powershell
-$env:MSSQL_SERVER = "localhost\SQLEXPRESS"
-$env:MSSQL_DATABASE = "AmazonDeliveryBI"
-$env:MSSQL_DRIVER = "ODBC Driver 18 for SQL Server"
+$ProjectRoot = (Resolve-Path '.').Path
+$env:MSSQL_SERVER = 'localhost\SQLEXPRESS'
+$env:MSSQL_DATABASE = 'AmazonDeliveryBI'
+$env:MSSQL_DRIVER = 'ODBC Driver 18 for SQL Server'
 $env:BI_PROJECT_ROOT = $ProjectRoot
-$env:PYTHONUTF8 = "1"
-$env:DEBUG = "0"
-```
+$env:PYTHONUTF8 = '1'
 
-Không ghi password hoặc credential vào Python, YAML hay Git.
-
-## 6. Khởi động và chạy pipeline
-
-```powershell
-Set-Location $ProjectRoot
+& '.\.venv\Scripts\Activate.ps1'
 mage start mage_project
 ```
 
-`PYTHONUTF8=1` buộc Python dùng UTF-8 khi Mage đọc mã nguồn để gợi ý trong
-giao diện. Trên Windows, nếu không đặt biến này, Mage có thể dùng `cp1252` và
-báo `UnicodeDecodeError` với file Python chứa tiếng Việt. Đặt biến trước khi
-khởi động Mage; nếu Mage đang chạy, dừng bằng `Ctrl+C` rồi khởi động lại.
+Không lưu credential trong Python, YAML hoặc Git.
 
-Trong Mage UI, chạy theo thứ tự để kiểm tra full load trên staging trống:
+## Chạy pipeline
 
-1. `test_sql_server_connection`.
-2. `amazon_delivery_full_load`.
+1. Chạy `test_sql_server_connection`.
+2. Chạy `amazon_delivery_full_load` trên staging mới, hoặc
+   `amazon_delivery_incremental_load` cho các lần ingest tiếp theo.
 
-Không chạy trực tiếp `mage_project/data_loaders/full_load_amazon_delivery.py`. File này là Mage block và phụ thuộc decorator/runtime của Mage.
+Không nhập `batch_name`; loader sinh tên động. Runtime variable tùy chọn
+`source_file_path` trỏ đến file mới, theo đường dẫn tuyệt đối hoặc tương đối
+từ project root.
 
-Kết quả mong đợi:
+Kết quả mong đợi khi chạy snapshot baseline:
 
-- Lần đầu: `SUCCEEDED`, đọc và nạp 43.739 dòng.
-- Chạy lại cùng file/checksum: `SKIPPED`, `rows_loaded = 0`, tổng số dòng staging không tăng.
+- Lần đầu trên staging trống: 43.739 insert.
+- Lần chạy đầu sau migration bảng cũ chưa có hash: 43.739 update để backfill
+  hash, không tăng row count.
+- Chạy lại cùng file: 43.739 unchanged, 0 insert, 0 update.
+- File có ID mới: insert.
+- File có ID cũ nhưng thuộc tính raw đổi: update.
 
-### Kiểm tra cách nạp theo ba batch lịch sử
-
-Chỉ thực hiện trên **staging trống riêng**; không chạy tiếp sau full load vì cùng
-`Order_ID` sẽ bị trùng. Chạy `test_sql_server_connection`, rồi chạy pipeline
-`amazon_delivery_incremental_load` ba lần. Mỗi lần nhập runtime variable
-`batch_name` trong Mage UI, không dùng giá trị mặc định:
-
-| Lần chạy | `batch_name` | Dòng nạp | Tổng dòng staging |
-|---|---|---:|---:|
-| 1 | `INITIAL_FULL` | 6.982 | 6.982 |
-| 2 | `INCREMENTAL_01` | 30.658 | 37.640 |
-| 3 | `INCREMENTAL_02` | 6.099 | 43.739 |
-
-Chạy lại `INCREMENTAL_02` với cùng CSV phải trả `SKIPPED`, `rows_loaded = 0`
-và tổng staging vẫn là 43.739. Pipeline này mô phỏng ba batch từ cùng một CSV;
-chưa tự phát hiện file mới theo lịch.
-
-Đối soát trong SSMS sau mỗi lần chạy:
+Đối soát:
 
 ```sql
-USE AmazonDeliveryBI;
 SELECT COUNT_BIG(*) AS staging_rows
 FROM staging.raw_amazon_delivery;
 
-SELECT batch_name, status, rows_read, rows_loaded, source_file_checksum,
+SELECT batch_name, status, rows_read, rows_inserted, rows_updated,
+       rows_unchanged, rows_rejected, rows_loaded, source_file_checksum,
        started_at, finished_at
 FROM audit.load_batch
-ORDER BY started_at, load_batch_id;
+ORDER BY started_at DESC;
 ```
 
-Loader đọc một snapshot byte của CSV, tính SHA-256 và parse DataFrame từ cùng
-snapshot đó. Exporter dùng checksum và tên file do loader chuyển qua các block;
-không mở lại file nguồn. Metadata pipeline không chứa đường dẫn `variables_dir`
-của máy cá nhân. Mỗi lần chạy incremental phải truyền `batch_name` tường minh.
+## Test
 
-## 7. Quy tắc commit
+```powershell
+$env:RUN_SQLSERVER_INTEGRATION = '1'
+Push-Location mage_project
+..\.venv\Scripts\python.exe -m unittest discover -s tests -v
+Pop-Location
+```
 
-Nên commit:
+Integration test tạo và xóa một database tạm riêng, không thay đổi database
+phát triển.
 
-- `mage_project/metadata.yaml`.
-- `mage_project/data_loaders/*.py`.
-- `mage_project/pipelines/*/metadata.yaml` và `__init__.py`.
-- `MAGE_TEAM_SETUP.md` và các tài liệu liên quan.
+## Checklist bàn giao dbt
 
-Không commit:
-
-- `.venv/`, `__pycache__/`, `*.pyc`, `.ipynb_checkpoints/`.
-- `mage_project/.mage_data/`, `mage_project/.ssh_tunnel/`, log và output tạm.
-- Junction, symlink, thư mục trung gian hoặc đường dẫn cá nhân.
-- `.env`, password, connection string chứa credential.
-
-## 8. Checklist trước khi bàn giao cho dbt
-
-- [ ] `sql/run_sql_skeleton.sql` chạy thành công trên đúng instance.
-- [ ] Pipeline connection xác nhận database, schema và hai bảng tồn tại.
-- [ ] Full Load trả `SUCCEEDED` và staging có 43.739 dòng.
-- [ ] Chạy lại trả `SKIPPED` và không tăng row count.
-- [ ] `audit.load_batch` có checksum SHA-256, status và row counts đúng.
-- [ ] Nếu demo incremental trên staging riêng: ba batch cộng thành 43.739 dòng;
-      chạy lại batch cuối trả `SKIPPED` và không tăng row count.
-- [ ] Raw có đủ 16 cột nguồn cùng bốn trường lineage.
-- [ ] Không có credential hoặc đường dẫn máy cá nhân trong file commit.
-- [ ] dbt source trỏ tới `AmazonDeliveryBI.staging.raw_amazon_delivery`.
+- [ ] SQL migration và validation pass.
+- [ ] 16 cột raw/các cột lineage cũ không đổi tên hoặc kiểu.
+- [ ] Mọi dòng current-state có `row_hash`.
+- [ ] Rerun cùng file chỉ tạo unchanged.
+- [ ] Read = insert + update + unchanged + rejected.
+- [ ] Loaded = insert + update.
+- [ ] `Order_ID` duy nhất sau trim/case-fold.
+- [ ] dbt source vẫn đọc `staging.raw_amazon_delivery`.
+- [ ] Không có credential hoặc đường dẫn cá nhân trong commit.

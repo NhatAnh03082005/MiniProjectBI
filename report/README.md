@@ -10,3 +10,7 @@
 - [Source-to-Target Mapping](../project_management/SOURCE_TO_TARGET_MAPPING.md).
 - [Luồng ánh xạ dữ liệu](figures/Luong_anh_xa_du_lieu.png).
 - [Ánh xạ theo nhóm trường](figures/anh_xa_theo_field.png).
+
+## Báo cáo thay đổi kỹ thuật
+
+- [Hoàn thiện Mage incremental và upsert](MAGE_INCREMENTAL_UPSERT_CHANGE_REPORT.md).

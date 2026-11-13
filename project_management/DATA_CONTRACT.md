@@ -22,7 +22,7 @@ Sự hiện diện của tài liệu và các thư mục scaffold **không chứ
 - `Approved`: có thể dùng làm tiêu chí triển khai và nghiệm thu. `Proposed`: cần rà soát trước khi khóa thiết kế vật lý. `Pending`: chưa được quyết định, không được tự suy diễn.
 - Khi có mâu thuẫn, ưu tiên tài liệu `Approved` mới nhất; không tự thay đổi grain, KPI hoặc model.
 - Mọi thay đổi contract phải được review, phân tích ảnh hưởng và ghi vào Decision Log trước khi các consumer áp dụng.
-- Raw phải bất biến. Chuẩn hóa, chuyển kiểu và tạo trường dẫn xuất chỉ bắt đầu từ staging/dbt.
+- Mười sáu giá trị raw không được trim, cast hoặc chuẩn hóa trong Mage. Bảng `staging.raw_amazon_delivery` là current-state theo `Order_ID`: Mage chỉ được ghi đè 15 thuộc tính raw khi raw row hash thay đổi; file nguồn được archive để replay. Chuẩn hóa và trường dẫn xuất vẫn bắt đầu từ dbt.
 - Không loại dòng chỉ vì thiếu Order Time, Weather, Traffic, Rating; rating ngoài miền, tuổi dưới 18, khoảng cách không hợp lệ hoặc IQR outlier.
 - Grain chính thức của `dw.fact_delivery` là **một dòng cho một `Order_ID` nguồn**. Snapshot hiện tại có 43.739 dòng và 43.739 `Order_ID` phân biệt.
 - Không có measure semi-additive vì dữ liệu chỉ chứa giao dịch phát sinh, không chứa số dư hoặc snapshot như tồn kho cuối kỳ.
@@ -40,7 +40,7 @@ amazon_delivery.csv
 → Generative AI
 ```
 
-Phân định trách nhiệm: Mage.ai ingest file, cấp batch metadata và logging; SQL Server Staging lưu bản tiếp nhận; dbt staging trim/null-normalization/parsing; dbt intermediate tạo derived fields và quality flags; dbt marts tạo Dimensions/Fact; Power BI quản lý relationships, DAX và dashboard; AI chỉ nhận KPI, breakdown và kết quả tổng hợp đã tính, không tính lại từ raw.
+Phân định trách nhiệm: Mage.ai ingest file, validation kỹ thuật, dynamic batch, raw row hash, current-state upsert và audit; SQL Server Staging lưu phiên bản raw hiện hành cùng lineage lần tạo/cập nhật; dbt staging tiếp tục trim/null-normalization/parsing; dbt intermediate tạo derived fields và quality flags; dbt marts tạo Dimensions/Fact; Power BI quản lý relationships, DAX và dashboard; AI chỉ nhận KPI, breakdown và kết quả tổng hợp đã tính.
 
 ### 3.1. Quy ước thư mục
 
@@ -49,7 +49,7 @@ Cây hiện tại được giữ nguyên để tránh tạo cấu trúc song son
 | Nhu cầu | Đường dẫn sử dụng |
 |---|---|
 | Full-load data | `data/full_load/` |
-| Incremental batch 01, 02 | `data/incremental/incremental_01/`, `data/incremental/incremental_02/` |
+| Incremental input/archive | `data/raw/`, `data/raw/archive/` |
 | Data samples | `data/samples/` |
 | SQL Server DDL/database | `sql/database/` |
 | SQL staging, warehouse, audit, validation | `sql/staging/`, `sql/warehouse/`, `sql/audit/`, `sql/validation/` |
@@ -93,24 +93,17 @@ Dataset được dùng theo tên người đăng Kaggle cung cấp; không khẳ
 | `Weather` | Điều kiện thời tiết; trim, thiếu thành null ở staging | `weather_name nvarchar(32)` |
 | `Traffic` | Mức giao thông; trim, thiếu thành null ở staging | `traffic_level nvarchar(32)` |
 | `Vehicle` | Loại phương tiện; trim, giữ cả nhóm hiếm | `vehicle_type nvarchar(32)` |
-| `Area` | Khu vực; raw bất biến, chuẩn hóa riêng ở lớp biến đổi | `area_name_raw`, `area_name nvarchar(64)` |
+| `Area` | Khu vực; giá trị raw không bị Mage chuẩn hóa, chuẩn hóa riêng ở dbt | `area_name_raw`, `area_name nvarchar(64)` |
 | `Delivery_Time` | Thời lượng giao hàng; giữ dải 10–270 và outlier | `delivery_time_minutes decimal(10,2)` |
 | `Category` | Danh mục; trim, giữ đủ 16 nhóm và `Grocery` | `category_name nvarchar(64)` |
 
 Các kiểu ở cột cuối là **Proposed theo MAP-01**, chưa phải DDL đã duyệt. Lỗi chuyển kiểu, tràn số hoặc vượt độ dài phải được audit; không âm thầm cắt, làm tròn hoặc đổi thành dữ liệu thiếu.
 
-### 4.2. Batch proposal
+### 4.2. Dynamic batch và idempotency
 
-Đây là phân hoạch đề xuất phục vụ diễn tập full/incremental; thiết kế watermark, late-arriving data, idempotency và rejected record thuộc LOAD-01.
+Mage sinh `batch_name` duy nhất cho từng lần chạy; không còn batch name, khoảng ngày hoặc số dòng gán cứng. Mỗi file được đối chiếu theo `Order_ID + row_hash`: ID mới được insert, ID cũ có hash khác được update, ID cũ có hash giống được đếm unchanged. Min/max `Order_Date` là metadata quan sát, không phải điều kiện loại correction có ngày cũ.
 
-| Batch | Thư mục | Khoảng ngày | Số dòng kỳ vọng | Mục đích |
-|---|---|---:|---:|---|
-| `full_load` | `data/full_load/` | 2022-02-11 → 2022-02-18 | 6.982 | Khởi tạo staging và DW |
-| `incremental_01` | `data/incremental/incremental_01/` | 2022-03-01 → 2022-03-31 | 30.658 | Incremental lần 1 |
-| `incremental_02` | `data/incremental/incremental_02/` | 2022-04-01 → 2022-04-06 | 6.099 | Incremental lần 2 |
-| **Tổng** |  | 2022-02-11 → 2022-04-06 | **43.739** | Phải khớp snapshot nguồn |
-
-Metadata tối thiểu cho mỗi batch: `load_batch_id`, `batch_type`, `source_file_name`, `started_at`, `finished_at`, `status`, `rows_read`, `rows_loaded`, `rows_rejected`, `error_message`. Checksum SHA-256 đầy đủ của file và khoảng ngày phải được lưu cùng manifest/audit. Chuỗi SHA phải được giữ nguyên đầy đủ, không rút gọn hoặc xóa.
+Metadata tối thiểu: `load_batch_id`, `batch_name`, `batch_type`, file name và checksum, khoảng ngày quan sát, thời gian bắt đầu/kết thúc, status, `rows_read`, `rows_inserted`, `rows_updated`, `rows_unchanged`, `rows_rejected`, `rows_loaded` và `error_message`. Hai công thức bắt buộc: `rows_loaded = rows_inserted + rows_updated`; `rows_read = rows_inserted + rows_updated + rows_unchanged + rows_rejected`.
 
 ## 5. Staging contract
 
@@ -119,11 +112,11 @@ Metadata tối thiểu cho mỗi batch: `load_batch_id`, `batch_type`, `source_f
 | Thuộc tính | Contract |
 |---|---|
 | Owner ghi | Mage.ai |
-| Grain | Một dòng vật lý từ file nguồn |
-| Schema | Đủ 16 cột nguồn dưới dạng chuỗi/raw, cộng metadata ingest cần thiết |
-| Bất biến | Không trim, sửa chính tả, đổi dấu tọa độ, chuẩn hóa null hoặc ghi đè giá trị nguồn |
-| Lineage bắt buộc | `source_file_name`, `source_row_number`, `load_batch_id`, `loaded_at` |
-| Rerun | Không được làm tăng bản ghi ngoài chủ đích; cơ chế chính xác **Pending LOAD-01** |
+| Grain | Một phiên bản raw hiện hành cho một `Order_ID` |
+| Schema | Đủ 16 cột nguồn dạng chuỗi/raw, `row_hash`, lineage lần tạo và lần cập nhật |
+| Raw behavior | Không trim, sửa chính tả, đổi dấu tọa độ hoặc chuẩn hóa null; chỉ update thuộc tính raw khi hash thay đổi |
+| Lineage bắt buộc | Lineage lần tạo: `source_file_name`, `source_row_number`, `load_batch_id`, `loaded_at`; lần cập nhật: các cột `updated_*` |
+| Rerun | Cùng hash là unchanged; không insert/update và không nhân bản ghi |
 | Không được làm | Không tính KPI, không tạo dimension key, không loại outlier |
 
 ### 5.2. `stg_amazon_delivery`
@@ -281,14 +274,14 @@ Giá trị trong ví dụ chỉ minh họa schema, không phải kết quả ngh
 ### 11.1. Source và batch
 
 - [ ] Đúng 16 header; không thiếu/thừa/đổi tên cột ở raw.
-- [ ] Tổng ba batch = 43.739; không chồng lặp hoặc hở khoảng ngày theo proposal.
+- [ ] Không có batch/date/row count gán cứng; batch name được sinh động.
 - [ ] `Order_ID` phân biệt = 43.739; null = 0 ở snapshot baseline.
 - [ ] Checksum SHA-256 đầy đủ của từng file được lưu và không bị thay đổi.
-- [ ] Số dòng read/write/rejected có thể đối soát về nguồn.
+- [ ] Read = insert + update + unchanged + rejected; loaded = insert + update.
 
 ### 11.2. Transformation và model
 
-- [ ] Raw bất biến; mọi cast/trim/normalization có audit lỗi.
+- [ ] Giá trị raw không bị Mage chuẩn hóa; current-state chỉ đổi khi hash đổi.
 - [ ] 91 dòng thiếu Order Time không bị đổi thành nửa đêm hoặc loại bỏ.
 - [ ] Pickup rollover = 828; delay null = 91; average baseline ≈ 9,991294 phút.
 - [ ] Rating valid/missing/invalid = 43.632/54/53; average valid ≈ 4,632121.
@@ -296,7 +289,7 @@ Giá trị trong ví dụ chỉ minh họa schema, không phải kết quả ngh
 - [ ] 79 IQR outlier Delivery Time được giữ; số dòng `>195` = 4.100.
 - [ ] Mọi dimension có Unknown key 0; mọi FK Fact có parent; không orphan.
 - [ ] `fact_delivery` có đúng 31 trường logic và không đổi grain khi join.
-- [ ] Rerun cùng batch không nhân đôi Fact; cơ chế phải được chốt ở LOAD-01.
+- [ ] Rerun cùng file cho toàn bộ dòng hợp lệ là unchanged và không nhân đôi Fact.
 
 ### 11.3. KPI và AI
 
@@ -324,14 +317,14 @@ Quy tắc handoff: producer phải cung cấp schema/manifest, số liệu đố
 
 ## 13. Open items không tự quyết định trong tài liệu này
 
-- Chiến lược watermark, late-arriving data, duplicate/rejected handling và idempotent load chi tiết: **Pending LOAD-01**.
+- Current-state upsert dùng `Order_ID + raw row_hash`; date range chỉ là metadata nên correction ngày cũ vẫn được phát hiện. Raw-history table riêng được hoãn; file archive là nguồn replay trong phạm vi mini project.
 - DDL vật lý cuối cùng, index, partition, schema materialization và orchestration schedule: **Pending các task triển khai**.
 - Kiểu/độ dài trong MAP-01 và boundary nhóm: **Proposed**, cần duyệt trước khi khóa code.
 - API framework, authentication và cơ chế query của AI: **Pending AI-01**.
 
 ## 14. Acceptance checklist
 
-- [ ] Đủ đúng 16 cột nguồn và raw bất biến.
+- [ ] Đủ đúng 16 cột nguồn; Mage chỉ thay current-state khi raw hash đổi.
 - [ ] Đúng một Fact `dw.fact_delivery` và năm Dimension đã duyệt; không có `dim_agent` hoặc `dim_time`.
 - [ ] Grain Fact là một dòng cho một `Order_ID` hợp lệ, duy nhất; không mặc định completed delivery.
 - [ ] `Order_ID` là degenerate business key; dimension dùng surrogate key số nguyên.

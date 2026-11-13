@@ -9,84 +9,102 @@ if 'test' not in globals():
     from mage_ai.data_preparation.decorators import test
 
 
-@custom
-def verify_amazon_delivery_batch(export_result, *args, **kwargs):
-    if export_result is None or len(export_result) != 1:
-        raise ValueError('Exporter phải trả đúng một dòng tóm tắt batch.')
-    result = export_result.iloc[0]
-    required_variables = ('MSSQL_SERVER', 'MSSQL_DATABASE', 'MSSQL_DRIVER')
-    missing = [name for name in required_variables if not os.environ.get(name)]
+def get_connection_string():
+    required = ('MSSQL_SERVER', 'MSSQL_DATABASE', 'MSSQL_DRIVER')
+    missing = [name for name in required if not os.environ.get(name)]
     if missing:
         raise RuntimeError('Thiếu biến môi trường: ' + ', '.join(missing))
-    connection_string = (
+    return (
         f"DRIVER={{{os.environ['MSSQL_DRIVER']}}};"
         f"SERVER={os.environ['MSSQL_SERVER']};"
         f"DATABASE={os.environ['MSSQL_DATABASE']};"
         'Trusted_Connection=yes;Encrypt=yes;TrustServerCertificate=yes;'
     )
-    with pyodbc.connect(connection_string) as connection:
+
+
+@custom
+def verify_amazon_delivery_batch(export_result, *args, **kwargs):
+    if export_result is None or len(export_result) != 1:
+        raise ValueError('Exporter phải trả đúng một dòng tóm tắt batch.')
+    result = export_result.iloc[0]
+    load_batch_id = str(result['load_batch_id'])
+
+    with pyodbc.connect(get_connection_string()) as connection:
         cursor = connection.cursor()
         cursor.execute(
             """
-            SELECT b.status, b.rows_read, b.rows_loaded, b.rows_rejected,
-                   b.source_file_checksum,
-                   (SELECT COUNT_BIG(*) FROM staging.raw_amazon_delivery AS s
-                    WHERE s.load_batch_id = b.load_batch_id)
-            FROM audit.load_batch AS b
-            WHERE b.load_batch_id = ?;
+            SELECT status, rows_read, rows_loaded, rows_rejected,
+                   rows_inserted, rows_updated, rows_unchanged,
+                   source_file_checksum
+            FROM audit.load_batch
+            WHERE load_batch_id = ?;
             """,
-            str(result['load_batch_id']),
+            load_batch_id,
         )
-        audit_row = cursor.fetchone()
-        if audit_row is None:
+        audit = cursor.fetchone()
+        if audit is None:
             raise ValueError('Không tìm thấy audit batch vừa chạy.')
 
         status = str(result['status']).upper()
-        expected = int(result['expected_row_count'])
-        if audit_row[0] != status or int(audit_row[1]) != int(result['rows_read']):
-            raise ValueError('Trạng thái hoặc số dòng đọc không khớp audit.')
-        if int(audit_row[2]) != int(result['rows_loaded']) or int(audit_row[3]) != 0:
-            raise ValueError('Số dòng nạp/từ chối không khớp audit.')
-        if str(audit_row[4]).lower() != str(result['source_file_checksum']).lower():
+        if status != 'SUCCEEDED' or str(audit[0]).upper() != status:
+            raise ValueError(f'Batch không SUCCEEDED: result={status}, audit={audit[0]}')
+
+        expected_values = (
+            int(result['rows_read']),
+            int(result['rows_loaded']),
+            int(result['rows_rejected']),
+            int(result['rows_inserted']),
+            int(result['rows_updated']),
+            int(result['rows_unchanged']),
+        )
+        audit_values = tuple(int(value) for value in audit[1:7])
+        if audit_values != expected_values:
+            raise ValueError(
+                f'Action counter không khớp: audit={audit_values}, result={expected_values}'
+            )
+        if expected_values[0] != sum(expected_values[2:6]):
+            raise ValueError('rows_read không bằng insert + update + unchanged + rejected.')
+        if expected_values[1] != expected_values[3] + expected_values[4]:
+            raise ValueError('rows_loaded không bằng insert + update.')
+        if str(audit[7]).lower() != str(result['source_file_checksum']).lower():
             raise ValueError('Checksum trong audit không khớp kết quả exporter.')
 
-        if status == 'SUCCEEDED':
-            if int(audit_row[5]) != expected or int(audit_row[2]) != expected:
-                raise ValueError('Số dòng staging của batch không đạt kỳ vọng.')
-        elif status == 'SKIPPED':
-            if int(audit_row[5]) != 0 or int(audit_row[2]) != 0:
-                raise ValueError('Batch SKIPPED không được ghi thêm dòng staging.')
-            cursor.execute(
-                """
-                SELECT TOP (1) b.load_batch_id
-                FROM audit.load_batch AS b
-                WHERE b.batch_name = ? AND b.batch_type = ?
-                  AND b.source_file_checksum = ?
-                  AND b.expected_date_from = ? AND b.expected_date_to = ?
-                  AND b.expected_row_count = ? AND b.rows_read = ?
-                  AND b.rows_loaded = ? AND b.status = 'SUCCEEDED'
-                  AND (SELECT COUNT_BIG(*) FROM staging.raw_amazon_delivery AS s
-                       WHERE s.load_batch_id = b.load_batch_id) = ?;
-                """,
-                str(result['batch_name']),
-                str(result['batch_type']),
-                str(result['source_file_checksum']),
-                str(result['start_date']),
-                str(result['end_date']),
-                expected, expected, expected, expected,
+        cursor.execute(
+            """
+            SELECT
+                SUM(CASE WHEN load_batch_id = ? THEN 1 ELSE 0 END),
+                SUM(CASE WHEN updated_load_batch_id = ? AND load_batch_id <> ?
+                         THEN 1 ELSE 0 END),
+                SUM(CASE WHEN (load_batch_id = ? OR updated_load_batch_id = ?)
+                              AND row_hash IS NULL THEN 1 ELSE 0 END)
+            FROM staging.raw_amazon_delivery;
+            """,
+            load_batch_id,
+            load_batch_id,
+            load_batch_id,
+            load_batch_id,
+            load_batch_id,
+        )
+        staging = cursor.fetchone()
+        inserted = int(staging[0] or 0)
+        updated = int(staging[1] or 0)
+        null_hashes = int(staging[2] or 0)
+        if inserted != expected_values[3] or updated != expected_values[4]:
+            raise ValueError(
+                f'Lineage staging không khớp: insert={inserted}, update={updated}.'
             )
-            if cursor.fetchone() is None:
-                raise ValueError('Không tìm thấy batch SUCCEEDED đầy đủ cho lần SKIPPED.')
-        else:
-            raise ValueError(f'Trạng thái batch không hợp lệ: {status}')
+        if null_hashes:
+            raise ValueError(f'Có {null_hashes} dòng được chạm nhưng thiếu row_hash.')
 
     return pd.DataFrame([{
-        'load_batch_id': str(result['load_batch_id']),
+        'load_batch_id': load_batch_id,
         'batch_name': str(result['batch_name']),
         'status': status,
-        'expected_row_count': expected,
-        'rows_read': int(result['rows_read']),
-        'rows_loaded': int(result['rows_loaded']),
+        'rows_read': expected_values[0],
+        'rows_inserted': expected_values[3],
+        'rows_updated': expected_values[4],
+        'rows_unchanged': expected_values[5],
+        'rows_rejected': expected_values[2],
         'verified': True,
     }])
 

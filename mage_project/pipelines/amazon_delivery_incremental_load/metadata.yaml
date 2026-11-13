@@ -89,6 +89,6 @@ tags:
 type: python
 uuid: amazon_delivery_incremental_load
 variables:
-  batch_name: INCREMENTAL_02
+  source_file_path: D:/BI/Mini Project/Demo/demo_incremental.csv
 variables_dir: C:\Users\PC\.mage_data\mage_project
 widgets: []

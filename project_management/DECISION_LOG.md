@@ -40,5 +40,8 @@
 | DEC-059 | 2026-10-17 | Không đưa exact drop coordinates vào semantic/public analytical model; chỉ công bố distance, validity flag và distance band | Tuân thủ privacy rule và vẫn hỗ trợ KPI khoảng cách | Nhóm | Đã xác nhận |
 | DEC-060 | 2026-10-17 | Relationships dùng Dimension 1 → Fact nhiều, filter một chiều; không many-to-many, bidirectional hoặc Dimension-to-Dimension | Giữ Star Schema rõ ràng và filter context ổn định | Nhóm | Đã xác nhận |
 | DEC-061 | 2026-10-17 | Phê duyệt `DIMENSIONAL_MODEL.md` và hoàn thành MOD-01 để chuyển sang MOD-02 | Logical model nhất quán với Business Baseline và đạt acceptance checklist | Nhóm | Đã xác nhận |
+| DEC-062 | 2026-11-12 | Mage dùng dynamic batch, không gán cứng tên batch, khoảng ngày hoặc số dòng | Pipeline phải nhận file mới mà không sửa code và vẫn ghi được phạm vi quan sát vào audit | Nhóm | Đã xác nhận |
+| DEC-063 | 2026-11-12 | `staging.raw_amazon_delivery` là current-state raw theo `Order_ID`; thay đổi được phát hiện bằng SHA-256 của 15 thuộc tính raw ngoài khóa | Đáp ứng upsert insert/update/unchanged, giữ interface dbt và không bỏ sót correction ngày cũ | Nhóm | Đã xác nhận |
+| DEC-064 | 2026-11-12 | Mage giữ validation kỹ thuật/upsert/audit; dbt tiếp tục trim, null normalization, cast, business rules và Star Schema | Tránh lặp transformation và cho phép hai workstream phát triển độc lập | Nhóm | Đã xác nhận |
 
 Không renumber Decision ID. Quyết định kiến trúc không đồng nghĩa thành phần kỹ thuật đã được triển khai.

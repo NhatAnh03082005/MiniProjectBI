@@ -51,7 +51,7 @@ Xây dựng hệ thống Business Intelligence tích hợp Generative AI để p
 | Star Schema diagram — MOD-02 | Todo |
 | Technical Implementation | Not deployed |
 
-Task tiếp theo là `MOD-02` — vẽ và đặc tả Star Schema dựa trên logical model đã Approved. Chưa hoàn thành Star Schema diagram, Mapping, Mage.ai, dbt, SQL Server/Data Warehouse, Power BI hoặc AI component.
+Mage ingestion đã hỗ trợ dynamic batch, raw row hash, current-state upsert và audit action counters; SQL bootstrap/migration và dbt regression được kiểm thử cục bộ. Các workstream còn lại tiếp tục theo task board và evidence tương ứng.
 
 ## Cấu trúc thư mục
 
