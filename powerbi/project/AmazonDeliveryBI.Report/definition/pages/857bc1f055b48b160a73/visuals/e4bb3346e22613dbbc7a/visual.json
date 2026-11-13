@@ -469,7 +469,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'P90 is calculated per row group • Above baseline P90 uses the 195 min reference'"
+                  "Value": "'P90 is calculated per row group • Above baseline uses the configured reference'"
                 }
               }
             },
@@ -500,7 +500,7 @@
             "altText": {
               "expr": {
                 "Literal": {
-                  "Value": "'Sortable area, category and vehicle groups with delivery volume, average, group P90 and share above the 195 minute baseline.'"
+                  "Value": "'Sortable area, category and vehicle groups with delivery volume, average, group P90 and share above the configured baseline.'"
                 }
               }
             }

@@ -1,10 +1,28 @@
 version: 2
 
 models:
+  - name: int_delivery_validation_errors
+    description: One row per hard rule violation, linked to its immutable raw row.
+    columns:
+      - name: staging_row_id
+        tests: [not_null]
+      - name: column_name
+        tests: [not_null]
+      - name: error_code
+        tests: [not_null]
+
+  - name: int_delivery_accepted
+    description: Enriched rows without hard rule violations; shared by Fact and categorical Dimensions.
+    columns:
+      - name: staging_row_id
+        tests: [not_null, unique]
+      - name: order_id
+        tests: [not_null, unique]
+
   - name: int_delivery_enriched
     description: >
-      Enriched delivery records used to build the approved Dimensions and
-      fact_delivery. It retains invalid or missing source values with flags.
+      Enriched delivery records before hard-rule filtering. It retains invalid
+      or missing source values with flags; accepted rows feed Dimensions and Fact.
       Duplicate resolution across batches remains pending LOAD-01.
     columns:
       - name: delivery_key
@@ -14,14 +32,25 @@ models:
           Business key for the baseline snapshot. Uniqueness across rerun or
           repeated batches cannot be tested until LOAD-01 defines a policy.
       - name: weather_name
+        description: Missing source values become Unknown when the field is configured as optional.
       - name: traffic_level
+        description: Missing source values become Unknown when the field is configured as optional.
       - name: vehicle_type
+        description: Optional missing values become Unknown and map to the vehicle Unknown Member.
       - name: area_name
+        description: Optional missing values become Unknown and map to the area Unknown Member.
       - name: category_name
+        description: Optional missing values become Unknown and map to the category Unknown Member.
       - name: pickup_delay_minutes
       - name: pickup_rollover_flag
       - name: delivery_distance_km
+        description: Computed Haversine distance retained even when above the configured analysis threshold.
       - name: valid_distance_flag
+        description: One only for calculable distances at or below the configured threshold.
+      - name: distance_outlier_flag
+        description: One when the calculated distance exceeds the configured threshold.
+      - name: distance_status
+        description: Valid, above-threshold outlier, or reason distance could not be calculated.
       - name: valid_rating_flag
       - name: missing_operational_context_flag
       - name: source_file_name

@@ -1,4 +1,4 @@
--- depends_on: {{ ref('int_delivery_enriched') }}
+-- depends_on: {{ ref('int_delivery_accepted') }}
 
 {{ config(
     materialized='table',
@@ -7,11 +7,17 @@
         'vehicle_key',
         'vehicle_type',
         'nvarchar(32)',
-        'int_delivery_enriched'
+        'int_delivery_accepted'
     ) }}"
 ) }}
 
 select
-    vehicle_key,
-    vehicle_type
-from dw.dim_vehicle_key_map
+    key_map.vehicle_key,
+    key_map.vehicle_type
+from dw.dim_vehicle_key_map as key_map
+where key_map.vehicle_type = {{ delivery_sql_string(var('delivery_rules').unknown_label) }}
+    or exists (
+        select 1
+        from {{ ref('int_delivery_accepted') }} as accepted
+        where accepted.vehicle_type = key_map.vehicle_type
+    )

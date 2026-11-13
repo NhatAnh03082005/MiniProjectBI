@@ -145,6 +145,21 @@ table _Measures
 		displayFolder: Operational Drivers
 		lineageTag: 71198761-70f5-4db8-8307-b87118dd10df
 
+	measure 'Calculated Distance Records' = COUNT ( fact_delivery[delivery_distance_km] )
+		formatString: #,0
+		displayFolder: Operational Drivers
+		lineageTag: 8a646725-4ce5-4352-b610-4b4cce584127
+
+	measure 'Average Calculated Delivery Distance' = AVERAGE ( fact_delivery[delivery_distance_km] )
+		formatString: 0.00
+		displayFolder: Operational Drivers
+		lineageTag: eaba8393-38d8-454b-8191-716108f228f9
+
+	measure 'Calculated Distance Delivery Minutes' = AVERAGEX ( FILTER ( fact_delivery, NOT ISBLANK ( fact_delivery[delivery_distance_km] ) ), fact_delivery[delivery_time_minutes] )
+		formatString: 0.0
+		displayFolder: Operational Drivers
+		lineageTag: e996f6ca-807d-4263-8d2b-ea868a1722bc
+
 	column Placeholder
 		isHidden
 		formatString: 0

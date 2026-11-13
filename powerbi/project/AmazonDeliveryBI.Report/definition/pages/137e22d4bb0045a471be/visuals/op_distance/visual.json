@@ -42,11 +42,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "Valid Distance Records"
+                  "Property": "Calculated Distance Records"
                 }
               },
-              "queryRef": "_Measures.Valid Distance Records",
-              "nativeQueryRef": "Valid Distance Records"
+              "queryRef": "_Measures.Calculated Distance Records",
+              "nativeQueryRef": "Calculated Distance Records"
             }
           ]
         },
@@ -60,11 +60,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "Valid Distance Records"
+                  "Property": "Calculated Distance Records"
                 }
               },
-              "queryRef": "_Measures.Valid Distance Records",
-              "nativeQueryRef": "Valid Distance Records"
+              "queryRef": "_Measures.Calculated Distance Records",
+              "nativeQueryRef": "Calculated Distance Records"
             }
           ]
         },
@@ -78,11 +78,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "Average Valid Delivery Distance"
+                  "Property": "Average Calculated Delivery Distance"
                 }
               },
-              "queryRef": "_Measures.Average Valid Delivery Distance",
-              "nativeQueryRef": "Average Valid Delivery Distance",
+              "queryRef": "_Measures.Average Calculated Delivery Distance",
+              "nativeQueryRef": "Average Calculated Delivery Distance",
               "active": true
             }
           ]
@@ -97,11 +97,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "Valid Distance Delivery Minutes"
+                  "Property": "Calculated Distance Delivery Minutes"
                 }
               },
-              "queryRef": "_Measures.Valid Distance Delivery Minutes",
-              "nativeQueryRef": "Valid Distance Delivery Minutes"
+              "queryRef": "_Measures.Calculated Distance Delivery Minutes",
+              "nativeQueryRef": "Calculated Distance Delivery Minutes"
             }
           ]
         }
@@ -142,7 +142,7 @@
             "titleText": {
               "expr": {
                 "Literal": {
-                  "Value": "'Average valid distance (km)'"
+                  "Value": "'Average calculated distance (km)'"
                 }
               }
             }
@@ -271,7 +271,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Valid distance vs delivery time'"
+                  "Value": "'Calculated distance vs delivery time'"
                 }
               }
             },
@@ -316,7 +316,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Valid distance only • Bubble size = records • Hover for band'"
+                  "Value": "'Calculated distance including flagged outliers; bubble size = records'"
                 }
               }
             },

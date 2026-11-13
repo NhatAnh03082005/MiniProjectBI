@@ -32,15 +32,17 @@ staging.raw_amazon_delivery
              v
  dbt: int_delivery_enriched
              |
-             +-----------------------------+
-             |                             |
-             v                             v
-      5 Dimension                     fact_delivery
-             |                             ^
-             +-----------------------------+
-                           |
-                           v
-                     dbt Data Tests
+             v
+ int_delivery_validation_errors ------> delivery_rejections
+             |
+             v
+    int_delivery_accepted
+         /          \
+        v            v
+  5 Dimension   fact_delivery
+        \            /
+         v          v
+           dbt Data Tests
 ```
 
 ---
@@ -345,7 +347,7 @@ Model này chưa tạo KPI tổng hợp và chưa loại các dòng bất thư�
 
 ## 8. Model `int_delivery_enriched`
 
-Đây là lớp áp dụng business rule và tạo dữ liệu phân tích. Model được materialize dưới dạng view.
+Đây là lớp áp dụng business rule và tạo dữ liệu phân tích. Model được materialize dưới dạng view. Các ngưỡng và nhãn đang nêu bên dưới là giá trị mặc định trong `vars.delivery_rules` của `dbt_project/dbt_project.yml`; khi sửa cấu hình, model và test cùng đọc giá trị mới.
 
 ### 8.1. Tạo khóa kỹ thuật
 
@@ -359,13 +361,7 @@ Cùng một `Order_ID` luôn tạo cùng một `delivery_key`.
 
 ### 8.2. Chuẩn hóa giá trị phân loại thiếu
 
-Các giá trị thiếu của Weather, Traffic, Vehicle, Area và Category được chuyển thành `Unknown`.
-
-Mục đích:
-
-- Không làm mất dòng Fact.
-- Tránh foreign key null.
-- Cho phép Power BI hiển thị riêng nhóm thiếu dữ liệu.
+Weather, Traffic, Vehicle, Area và Category thiếu được biểu diễn bằng `Unknown` và vẫn có thể vào Fact nếu các trường bắt buộc khác hợp lệ. `missing_operational_context_flag` ghi nhận Weather/Traffic thiếu; Vehicle, Area và Category thiếu tra vào Unknown Member của Dimension tương ứng.
 
 ### 8.3. Tạo khung giờ
 
@@ -375,7 +371,7 @@ Mục đích:
 | 06:00-11:59 | `Morning` |
 | 12:00-17:59 | `Afternoon` |
 | 18:00-23:59 | `Evening` |
-| Thiếu giờ | `Unknown` |
+| Thiếu giờ | `Unknown` trong intermediate; dòng bị loại trước Fact |
 
 ### 8.4. Tạo nhóm tuổi
 
@@ -386,7 +382,7 @@ Mục đích:
 | 25-34 | `25-34` |
 | 35-44 | `35-44` |
 | Từ 45 | `45+` |
-| Thiếu tuổi | `Unknown` |
+| Thiếu tuổi | `Unknown` trong intermediate; dòng bị loại trước Fact |
 
 Tuổi dưới 18 không bị xóa mà được gắn `underage_agent_flag = 1`.
 
@@ -394,11 +390,11 @@ Tuổi dưới 18 không bị xóa mà được gắn `underage_agent_flag = 1`.
 
 - `agent_rating_raw` giữ giá trị sau chuyển kiểu.
 - Rating từ 1 đến 5 được đưa vào `agent_rating_valid`.
-- Rating ngoài 1-5 không tham gia KPI rating hợp lệ.
+- Rating ngoài 1-5 được ghi vào `delivery_rejections` và không vào DDS.
 - `valid_rating_flag` cho biết rating có hợp lệ hay không.
 - `rating_group` hỗ trợ phân nhóm phân tích.
 
-Rating 6 được giữ trong raw để truy vết nhưng không được dùng để tính Average Valid Agent Rating.
+Rating 6 vẫn ở raw để đối chiếu; bảng lỗi lưu `staging_row_id`, cột, giá trị nguồn và lý do loại.
 
 ### 8.6. Tính pickup delay
 
@@ -435,12 +431,10 @@ Trường hợp qua ngày được đánh dấu bằng `pickup_rollover_flag`.
 
 Khoảng cách được tính từ bốn tọa độ Store và Drop bằng công thức Haversine với bán kính Trái Đất xấp xỉ 6.371 km.
 
-Một khoảng cách chỉ được công bố là hợp lệ khi:
+Khoảng cách được tính và giữ nguyên khi có đủ bốn tọa độ nằm trong phạm vi vĩ độ [-90,90], kinh độ [-180,180] và tọa độ Store không phải `(0,0)`. `valid_distance_flag` là cờ phục vụ phân tích trong ngưỡng 50 km, không phải điều kiện nạp Fact.
 
-- Có đủ bốn tọa độ.
-- Vĩ độ nằm trong khoảng -90 đến 90.
-- Kinh độ nằm trong khoảng -180 đến 180.
-- Tọa độ Store không phải `(0,0)`.
+Một khoảng cách được đánh dấu trong ngưỡng khi:
+
 - Khoảng cách tính được không vượt 50 km.
 
 Nếu đạt điều kiện:
@@ -450,13 +444,17 @@ valid_distance_flag = 1
 delivery_distance_km = khoảng cách Haversine
 ```
 
-Nếu không đạt:
+Nếu khoảng cách tính được vượt 50 km:
 
 ```text
 valid_distance_flag = 0
-delivery_distance_km = NULL
-distance_band = Unknown
+distance_outlier_flag = 1
+delivery_distance_km = khoảng cách Haversine thực tế
+distance_status = Outlier >50 km
+distance_band = >50 km
 ```
+
+Nếu tọa độ Store là `(0,0)`, khoảng cách không đáng tin cậy để tính: `delivery_distance_km = NULL`, `distance_outlier_flag = 0`, `distance_status = 'Store coordinates (0,0)'` và `distance_band = 'Not calculable (Store 0,0)'`. Dòng vẫn ở Fact để đối chiếu tọa độ gốc; không tự tạo một số khoảng cách giả.
 
 Đây là khoảng cách đường chim bay, không phải quãng đường thực tế trên mạng lưới giao thông.
 
@@ -470,6 +468,8 @@ distance_band = Unknown
 | `delivery_time_iqr_outlier_flag` | Delivery Time nằm ngoài biên IQR đã thiết lập. |
 | `pickup_rollover_flag` | Pickup được giả định xảy ra vào ngày hôm sau. |
 | `valid_distance_flag` | Khoảng cách đáp ứng quality rule. |
+| `distance_outlier_flag` | Khoảng cách tính được lớn hơn 50 km. |
+| `distance_status` | Trạng thái khoảng cách hoặc lý do không tính được. |
 | `missing_operational_context_flag` | Thiếu Order Time, Weather hoặc Traffic. |
 
 Ngưỡng 195 phút là P90 baseline thống kê, không phải SLA và không được gọi là ngưỡng giao trễ.
@@ -509,14 +509,14 @@ Từ dữ liệu đã chuẩn hóa, dbt tạo năm Dimension.
 
 ### 9.6. Surrogate key và Unknown Member
 
-Dimension sử dụng surrogate key số nguyên. Giá trị thiếu hoặc không lookup được sử dụng Unknown Member với key bằng `0`.
+Dimension sử dụng surrogate key số nguyên. Weather/Traffic thiếu có thể tạo tổ hợp `Unknown` trong `dim_delivery_condition`; Vehicle, Area và Category thiếu tra vào Unknown Member key `0` của Dimension tương ứng. Key `0` cũng là phương án dự phòng nếu lookup không được; dữ liệu nguồn thiếu ở 11 cột bắt buộc đã bị loại trước khi tạo Fact.
 
 Unknown Member giúp:
 
 - Giữ lại dòng Fact.
 - Không tạo foreign key null.
 - Không phát sinh orphan relationship.
-- Cho phép theo dõi nhóm dữ liệu thiếu trên dashboard.
+- Giữ quan hệ khóa ngoại khi có giá trị nguồn không khớp Dimension.
 
 ---
 
@@ -529,16 +529,16 @@ Unknown Member giúp:
 Với dữ liệu baseline:
 
 ```text
-43.739 Order_ID duy nhất -> 43.739 dòng fact_delivery
+43.739 dòng raw -> 43.594 dòng fact_delivery + 145 dòng bị loại
 ```
 
 `fact_delivery` là transaction fact vì mỗi dòng biểu diễn một sự kiện/bản ghi giao hàng ở mức chi tiết.
 
 ### 10.2. Điều kiện đầu vào
 
-dbt chỉ đưa vào Fact các dòng có `order_id` khác null.
+dbt chỉ đưa vào Fact các dòng không vi phạm quy tắc cứng và có đủ 11 cột nguồn bắt buộc. Weather, Traffic, Vehicle, Area và Category được phép thiếu, khi đó nhận `Unknown`; `Order_Time` thiếu vẫn bị loại. Lỗi chặn còn gồm chuyển kiểu thất bại ở trường bắt buộc, `order_id` trùng sau trim, tuổi âm, rating ngoài 1-5, tọa độ ngoài phạm vi và thời gian giao âm. Tuổi dưới 18, khoảng cách trên 50 km và ngoại lệ thống kê vẫn được giữ với cờ cảnh báo.
 
-Model lấy dữ liệu chi tiết từ `int_delivery_enriched`, sau đó lookup năm Dimension để lấy:
+Model lấy dữ liệu chi tiết từ `int_delivery_accepted`, sau đó lookup năm Dimension để lấy:
 
 - `date_key`.
 - `delivery_condition_key`.
@@ -601,6 +601,8 @@ fact_delivery.area_key = 2
 - `above_baseline_p90_flag`.
 - `delivery_time_iqr_outlier_flag`.
 - `valid_distance_flag`.
+- `distance_outlier_flag`.
+- `distance_status`.
 - `distance_band`.
 - `missing_operational_context_flag`.
 
@@ -641,21 +643,25 @@ Kiểm tra năm foreign key trong Fact đều tìm thấy khóa tương ứng tr
 
 | Test | Chức năng |
 |---|---|
-| `test_staging_cast_failures` | Phát hiện lỗi chuyển kiểu. |
+| `test_staging_cast_failures` | Kiểm tra mọi lỗi chuyển kiểu đều có trong bảng lỗi. |
 | `test_agent_age_rules` | Kiểm tra nhóm tuổi và cờ dưới 18. |
 | `test_delivery_time_nonnegative` | Delivery Time không được âm. |
 | `test_approved_business_rules` | Kiểm tra các business rule đã duyệt. |
 | `test_distance_validity_rules` | Kiểm tra khoảng cách, flag và distance band. |
 | `test_rating_validity_rules` | Kiểm tra rating hợp lệ và các cờ tương ứng. |
+| `test_delivery_rejection_reconciliation` | Đối soát raw = Fact + số dòng bị loại riêng biệt. |
+| `test_rejected_orders_excluded` | Không để đơn bị loại xuất hiện trong Fact. |
+| `test_required_analytics_fields` | Kiểm tra dòng được nhận không thiếu trường nguồn cần cho báo cáo. |
+| `warn_rejected_delivery_rows` | Cảnh báo số dòng raw bị loại, đếm mỗi `staging_row_id` một lần. |
 
 Kết quả runtime hiện có:
 
 ```text
-6 table models
-2 view models
-59 data tests
-PASS = 67
-WARN = 0
+7 table models
+4 view models
+79 data tests
+PASS = 90 (gồm 1 hook kiểm tra cấu hình)
+WARN = 1 (145 dòng raw bị loại)
 ERROR = 0
 SKIP = 0
 ```
@@ -664,16 +670,20 @@ SKIP = 0
 
 ## 12. Đối soát số dòng
 
-Sau khi ETL hoàn thành, bốn lớp chính đều có cùng số dòng:
+Sau khi ETL hoàn thành, số dòng raw được chia thành Fact và bảng lỗi:
 
 | Lớp | Số dòng |
 |---|---:|
 | `staging.raw_amazon_delivery` | 43.739 |
 | `dw.stg_amazon_delivery` | 43.739 |
 | `dw.int_delivery_enriched` | 43.739 |
-| `dw.fact_delivery` | 43.739 |
+| `dw.int_delivery_accepted` | 43.594 |
+| `dw.fact_delivery` | 43.594 |
+| Dòng raw bị loại riêng biệt | 145 |
 
-Việc đối soát cho thấy pipeline không làm mất hoặc nhân đôi bản ghi trong baseline hiện tại.
+Bảng `dw.delivery_rejections` có một dòng cho mỗi cột vi phạm: 54 rating thiếu, 91 giờ đặt thiếu và 53 rating ngoài 1-5. Cả 91 dòng thiếu Weather/Traffic hiện cũng thiếu giờ đặt nên vẫn bị loại. Khi đối soát phải đếm 145 `staging_row_id` riêng biệt để không đếm trùng dòng raw có nhiều lỗi.
+
+Vehicle, Area và Category hiện được phép thiếu và sẽ nhận `Unknown` trong Fact, nhưng dữ liệu baseline không có dòng thiếu ba cột này; số dòng nêu trên vì vậy không thay đổi sau khi nới quy tắc.
 
 ---
 
@@ -688,7 +698,8 @@ Việc đối soát cho thấy pipeline không làm mất hoặc nhân đôi b�
 | Mage Verification | Đọc lại database để xác minh kết quả. |
 | SQL Server | Lưu audit, raw staging, view và table Data Warehouse. |
 | dbt Staging | Trim, chuẩn hóa null và chuyển kiểu. |
-| dbt Intermediate | Áp dụng business rule, tính trường dẫn xuất và quality flag. |
+| dbt Intermediate | Áp dụng business rule, tính trường dẫn xuất, quality flag và phân loại lỗi cứng. |
+| dbt Rejections | Lưu trạng thái hiện tại của các lỗi cứng cùng giá trị raw và lý do. |
 | dbt Dimensions | Cung cấp các chiều phân tích và surrogate key. |
 | dbt Fact | Lưu measure ở grain một `Order_ID`. |
 | dbt Tests | Bảo vệ grain, khóa, quan hệ và business rule. |
@@ -716,6 +727,8 @@ Thiết kế này mang lại các lợi ích:
 - Chưa có watermark hoặc Change Data Capture từ hệ thống nguồn thật.
 - Database đang chạy local, chưa phải production environment.
 - Haversine chỉ là khoảng cách đường chim bay.
+- `dim_date` hiện chỉ có lịch năm 2022; nếu nhận dữ liệu năm khác cần mở rộng lịch để lookup ngày, không coi năm khác là lỗi dữ liệu.
+- Bảng lỗi được dựng lại mỗi lần dbt chạy, chưa lưu lịch sử các lần đánh giá/sửa lỗi.
 - Dataset không có delivery status, SLA, promised time, doanh thu hoặc `Agent_ID`.
 - Không thể kết luận quan hệ nhân quả từ các khác biệt mô tả.
 
@@ -723,7 +736,7 @@ Thiết kế này mang lại các lợi ích:
 
 ## 16. Đoạn thuyết trình ngắn
 
-> Dữ liệu bắt đầu từ file `amazon_delivery.csv` gồm 43.739 bản ghi và 16 cột. Mage.ai đọc file dưới dạng chuỗi, tính checksum, kiểm tra cấu trúc và chia dữ liệu thành Full Load hoặc các batch incremental. Data Exporter ghi lịch sử vào `audit.load_batch`, kiểm tra trùng lặp và nạp dữ liệu nguyên trạng vào `staging.raw_amazon_delivery` trong transaction. Sau đó dbt đọc bảng raw, model `stg_amazon_delivery` thực hiện trim, null normalization và chuyển kiểu. Model `int_delivery_enriched` áp dụng các business rule như nhóm tuổi, rating hợp lệ, pickup rollover, pickup delay, khoảng cách Haversine và các quality flag. Từ lớp intermediate, dbt tạo năm Dimension và lookup surrogate key để tạo `fact_delivery` ở grain một dòng cho một `Order_ID`. Cuối cùng, các data test kiểm tra grain, khóa, relationship, rating, tuổi, khoảng cách và Delivery Time. Kết quả đối soát cho thấy bốn lớp đều có 43.739 dòng và dbt build đạt 67 trên 67 PASS.
+> Dữ liệu bắt đầu từ file `amazon_delivery.csv` gồm 43.739 bản ghi và 16 cột. Mage.ai ghi dữ liệu nguyên trạng vào `staging.raw_amazon_delivery`. dbt chuẩn hóa, tính trường dẫn xuất và phân loại lỗi cứng hoặc giá trị thiếu ở trường báo cáo theo `vars.delivery_rules`. Các dòng đạt điều kiện tạo năm Dimension và `fact_delivery`; dòng vi phạm được ghi vào `delivery_rejections` để đối chiếu với raw. Kết quả hiện tại: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại; `dbt build` đạt 90 PASS, 1 WARN cho 145 dòng bị loại và 0 ERROR.
 
 ---
 
@@ -745,9 +758,9 @@ Lớp intermediate tập trung business rule dùng chung, tránh lặp logic tro
 
 Fact cần lookup các natural value để lấy surrogate key, từ đó tạo quan hệ Star Schema ổn định.
 
-### Vì sao không xóa rating 6 hoặc tuổi dưới 18?
+### Rating 6 và tuổi dưới 18 được xử lý ra sao?
 
-Đây là giá trị đáng ngờ nhưng chưa đủ cơ sở để xóa raw. Project giữ giá trị để truy vết, đồng thời tạo trường hợp lệ và quality flag phục vụ phân tích.
+Raw vẫn giữ cả hai giá trị để truy vết. Rating 6 là lỗi cứng nên dòng đó vào `delivery_rejections`, không vào DDS; tuổi dưới 18 được giữ trong DDS cùng `underage_agent_flag`.
 
 ### Vì sao không lưu P90 trong Fact?
 
@@ -755,4 +768,4 @@ P90 phụ thuộc vào tập dữ liệu đang được lọc. Power BI phải t
 
 ### Làm sao chứng minh không mất dữ liệu?
 
-Bốn lớp raw, staging, intermediate và Fact đều có 43.739 dòng; các test unique, not-null, relationship và grain đều PASS.
+Raw/staging/intermediate có 43.739 dòng; Fact có 43.594 dòng và bảng lỗi có 145 `staging_row_id` riêng biệt. Test đối soát và các test unique, not-null, relationship, grain đều PASS.
