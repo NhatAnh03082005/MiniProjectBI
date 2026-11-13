@@ -5,7 +5,7 @@ sources:
     description: >
       Immutable raw landing table written by Mage.ai. dbt must not alter raw
       values or use this table as a semantic-model output.
-    database: AmazonDeliveryBI
+    database: "{{ env_var('DBT_SQLSERVER_DATABASE', 'AmazonDeliveryBI') }}"
     schema: staging
     tables:
       - name: raw_amazon_delivery
