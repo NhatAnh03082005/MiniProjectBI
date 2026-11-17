@@ -1,0 +1,5 @@
+# Standard 64-bit CPython 3.11-3.13; separate from Mage/dbt's environment.
+streamlit==1.67.0
+pandas==2.3.3
+pyodbc==5.5.0
+httpx==0.28.1
