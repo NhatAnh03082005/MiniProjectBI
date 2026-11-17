@@ -56,7 +56,7 @@ Cây hiện tại được giữ nguyên để tránh tạo cấu trúc song son
 | Mage full/incremental pipeline | `mage_project/pipelines/full_load/`, `mage_project/pipelines/incremental_load/` |
 | dbt models/tests | `dbt_project/models/`, `dbt_project/tests/` |
 | Power BI mock data/specification/artifact | `powerbi/mock_data/`, `powerbi/specifications/`, `powerbi/pbix/` |
-| AI input/output/code | `ai/sample_inputs/`, `ai/sample_output/`, `ai/src/` |
+| AI code, hướng dẫn và kiểm thử | `ai/*.py`, `ai/README.md`, `ai/run.ps1`, `ai/requirements.txt`, `ai/tests/` |
 | Report | `report/sections/`, `report/figures/`, `report/references/` |
 | Evidence tập trung | `evidence/{mage,dbt,sql_server,powerbi,ai,end_to_end}/` |
 
@@ -236,6 +236,8 @@ Supporting diagnostic measures: Records Missing Operational Context, Records Mis
 
 ## 10. AI contract
 
+Triển khai hiện hành của AI-01 dùng ứng dụng Streamlit và Gemini REST API; cách cài, cấu hình và kiểm chứng nằm trong [hướng dẫn AI](../ai/README.md). Các JSON bên dưới mô tả logical contract ban đầu; cấu trúc phản hồi thực tế gồm `summary`, `explanations`, `answer`, `answer_status` và dẫn chứng, được định nghĩa tại `ai/grounding.py`.
+
 AI assistant chỉ nhận KPI/breakdown đã tính từ semantic/query layer được kiểm soát; không đọc raw coordinates, secret hoặc tự tạo số liệu. Logical input tối thiểu:
 
 ```json
@@ -267,7 +269,7 @@ Logical output tối thiểu:
 }
 ```
 
-Giá trị trong ví dụ chỉ minh họa schema, không phải kết quả nghiệp vụ. Output phải nêu filter context, đơn vị, khoảng thời gian, sample size khi phù hợp và cảnh báo dữ liệu. AI không được khẳng định quan hệ nhân quả; gọi 195 phút là SLA; gọi record vượt 195 phút là “giao trễ”; tuyên bố dataset là dữ liệu vận hành chính thức của Amazon; hoặc nhận exact drop coordinates khi không cần thiết. API framework, authentication, endpoint, timeout, caching và SQL generation là **Pending AI-01**.
+Giá trị trong ví dụ chỉ minh họa schema, không phải kết quả nghiệp vụ. Output phải nêu filter context, đơn vị, khoảng thời gian, sample size khi phù hợp và cảnh báo dữ liệu. AI không được khẳng định quan hệ nhân quả; gọi 195 phút là SLA; gọi record vượt 195 phút là “giao trễ”; tuyên bố dataset là dữ liệu vận hành chính thức của Amazon; hoặc nhận exact drop coordinates khi không cần thiết. AI-01 đã có Gemini REST client với key nhập theo phiên, timeout và kiểm tra chứng cứ; số liệu được tính bằng Python từ DDS, không sinh SQL bằng LLM. Chi tiết cơ chế và giới hạn được ghi trong `ai/README.md`.
 
 ## 11. Data quality checklist
 
@@ -320,7 +322,7 @@ Quy tắc handoff: producer phải cung cấp schema/manifest, số liệu đố
 - Current-state upsert dùng `Order_ID + raw row_hash`; date range chỉ là metadata nên correction ngày cũ vẫn được phát hiện. Raw-history table riêng được hoãn; file archive là nguồn replay trong phạm vi mini project.
 - DDL vật lý cuối cùng, index, partition, schema materialization và orchestration schedule: **Pending các task triển khai**.
 - Kiểu/độ dài trong MAP-01 và boundary nhóm: **Proposed**, cần duyệt trước khi khóa code.
-- API framework, authentication và cơ chế query của AI: **Pending AI-01**.
+- AI-01 đã có triển khai cục bộ; thành viên nhận source kiểm tra môi trường, quyền đọc DDS và Gemini key/quota theo [hướng dẫn AI](../ai/README.md).
 
 ## 14. Acceptance checklist
 

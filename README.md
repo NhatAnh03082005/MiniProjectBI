@@ -18,6 +18,7 @@ Xây dựng hệ thống Business Intelligence tích hợp Generative AI để p
 
 ## Tài liệu hiện hành
 
+- [Chạy và cấu hình AI với Gemini sau khi pull source](ai/README.md): yêu cầu môi trường, DDS, nhập API key trên giao diện, demo và xử lý lỗi.
 - [Dataset Selection](project_management/DATASET_SELECTION.md)
 - [Data Profile](project_management/DATA_PROFILE_AMAZON_DELIVERY.md)
 - [Business Requirements](project_management/BUSINESS_REQUIREMENTS.md)
@@ -48,8 +49,9 @@ Xây dựng hệ thống Business Intelligence tích hợp Generative AI để p
 | KPI Dictionary v2 | Done |
 | Team Handoff v2 | Done |
 | Logical Dimensional Model — MOD-01 | Approved / Done |
-| Star Schema diagram — MOD-02 | Todo |
-| Technical Implementation | Not deployed |
+| Star Schema diagram — MOD-02 | Có tại `report/figures/star-schema.png` |
+| ETL, DDS và Power BI | Có source triển khai và project Power BI; xem hướng dẫn từng thành phần |
+| AI-Assisted Analytics — mục 3.5 | Ứng dụng Gemini chạy cục bộ; xem [hướng dẫn AI](ai/README.md) |
 
 Mage ingestion đã hỗ trợ dynamic batch, raw row hash, current-state upsert và audit action counters; SQL bootstrap/migration và dbt regression được kiểm thử cục bộ. Các workstream còn lại tiếp tục theo task board và evidence tương ứng.
 
@@ -61,7 +63,7 @@ Mage ingestion đã hỗ trợ dynamic batch, raw row hash, current-state upsert
 - `mage_project`: mã nguồn và kiểm thử Mage.ai.
 - `dbt_project`: models, tests, macros, seeds và snapshots dbt.
 - `powerbi`: PBIX, DAX, mockup và theme.
-- `ai`: mã nguồn, prompt, test và input mẫu cho AI.
+- `ai`: ứng dụng Gemini, script cài/chạy, hướng dẫn và kiểm thử; API key nhập trên giao diện.
 - `report`: nội dung, hình và tài liệu tham khảo của báo cáo.
 - `evidence`: bằng chứng kiểm thử theo từng thành phần.
 - `demo`: kịch bản và bản ghi demo.
