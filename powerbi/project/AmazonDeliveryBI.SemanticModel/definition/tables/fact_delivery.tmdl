@@ -371,6 +371,23 @@ table fact_delivery
 		lineageTag: 6f14c43e-e824-4b4c-bb84-9377cbf0f9c2
 		summarizeBy: none
 
+	column distance_outlier_flag
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: d2e6272e-b016-4bc9-a516-af20c65326c5
+		summarizeBy: none
+		sourceColumn: distance_outlier_flag
+
+		annotation SummarizationSetBy = Automatic
+
+	column distance_status
+		dataType: string
+		lineageTag: 4d774073-16da-435b-909f-b1192bfd84a9
+		summarizeBy: none
+		sourceColumn: distance_status
+
+		annotation SummarizationSetBy = Automatic
+
 	partition fact_delivery = m
 		mode: import
 		source =

@@ -87,7 +87,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'0-minute intervals [start, end) • Valid delivery-time records'"
+                  "Value": "'20-minute intervals [start, end) • Valid delivery-time records'"
                 }
               }
             },
