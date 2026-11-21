@@ -94,6 +94,7 @@ class GroundingTests(unittest.TestCase):
         self.assertRejected(self.response)
 
     def test_derived_citations_still_have_a_bounded_unique_list(self):
+        self.bundle["facts"][2].update(value=3, display="3 bản ghi")
         for i in range(4, 12):
             self.bundle["facts"].append({"id": f"F{i:03d}", "value": i, "display": f"{i} bản ghi"})
         self.response["summary"][0] = {
@@ -105,6 +106,31 @@ class GroundingTests(unittest.TestCase):
     def test_null_fact_cannot_become_a_numeric_statement(self):
         self.response["summary"][0] = {"text": "Khoảng cách trung bình là {{F003}}.", "evidence_ids": ["F003"]}
         self.assertRejected(self.response)
+
+    def test_null_citation_is_rejected_without_a_numeric_placeholder_in_every_section(self):
+        for section in ("summary", "explanations", "answer"):
+            with self.subTest(section=section):
+                payload = copy.deepcopy(self.response)
+                payload[section] = [{"text": "Chỉ số trong phạm vi đang ở mức thấp.", "evidence_ids": ["F003"]}]
+                question = ""
+                if section == "answer":
+                    payload["answer_status"] = "answered"
+                    question = "Chỉ số trong phạm vi đang như thế nào?"
+                with self.assertRaises(GroundingError):
+                    validate_response(payload, self.bundle, question)
+
+    def test_valid_token_does_not_make_a_mixed_null_citation_acceptable(self):
+        for section in ("summary", "explanations", "answer"):
+            with self.subTest(section=section):
+                payload = copy.deepcopy(self.response)
+                payload[section] = [{"text": "Phạm vi có {{F001}} và chỉ số đang ở mức thấp.",
+                                     "evidence_ids": ["F001", "F003"]}]
+                question = ""
+                if section == "answer":
+                    payload["answer_status"] = "answered"
+                    question = "Phạm vi đang chọn có những số liệu nào?"
+                with self.assertRaises(GroundingError):
+                    validate_response(payload, self.bundle, question)
 
     def test_unknown_placeholder_and_extra_fields_are_blocked(self):
         bad = copy.deepcopy(self.response)
@@ -145,6 +171,14 @@ class GroundingTests(unittest.TestCase):
         self.assertEqual(validate_response(self.response, self.bundle, "Bao nhiêu bản ghi?")["answer_status"], "answered")
         self.response["answer"] = []; self.response["answer_status"] = "insufficient_data"
         self.assertEqual(validate_response(self.response, self.bundle, "Doanh thu là bao nhiêu?")["answer_status"], "insufficient_data")
+
+    def test_malformed_answer_status_is_a_grounding_error(self):
+        for status in ([], {}, None, 1, True):
+            with self.subTest(status=status):
+                payload = copy.deepcopy(self.response)
+                payload["answer_status"] = status
+                with self.assertRaises(GroundingError):
+                    validate_response(payload, self.bundle)
 
     def test_duplicate_evidence_ids_and_nonfinite_values_are_rejected(self):
         self.bundle["facts"].append(copy.deepcopy(self.bundle["facts"][0]))

@@ -76,6 +76,15 @@ thống kê cố định; không sử dụng bất kỳ nhãn đúng hạn hoặ
 Không coi ngày không có bản ghi là ngừng hoạt động. Nhóm ít mẫu và Unknown cần thận trọng.
 Không dẫn URL, HTML, liên kết hay chỉ dẫn hành động ngoài phân tích mô tả.
 
+Khi giải thích biến động theo ngày, dùng token của các fact tương ứng cho ngày đầu/cuối,
+trung bình và cỡ mẫu; không chép trực tiếp ngày hoặc số từ context vào lời văn.
+
+Không dùng cỡ mẫu hoặc mẫu số của chỉ số khác: rating chỉ đi với số rating hợp lệ,
+khoảng cách với số khoảng cách hợp lệ, thời lượng với số thời lượng hợp lệ. Nếu chưa có
+token fact đếm tương ứng với chính chỉ số đó, chỉ nêu giá trị chỉ số và bỏ phần cỡ mẫu;
+không lấy một số đếm khác để thay thế hoặc chép số n trực tiếp từ fact/context.
+Mỗi nhận xét giải thích tập trung vào một chỉ số hoặc một so sánh cùng ngữ cảnh.
+
 Kiểm tra lần cuối trước khi trả JSON: không còn chữ số nào trong text ngoài P90, P95,
 nhãn nhóm nguyên văn trong allowed_terms hoặc bên trong {{Fxxx}}. Đặc biệt không tự
 viết ngưỡng cỡ mẫu, số ngày, thang điểm rating, ngày tháng hay khoảng cách bằng số.

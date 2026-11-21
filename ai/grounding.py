@@ -115,6 +115,8 @@ def _statement(raw: Any, facts: Mapping[str, dict[str, Any]], allowed_terms: lis
         raise GroundingError("Mỗi nhận xét cần dẫn các chứng cứ tương ứng.")
     if any(not isinstance(r, str) or r not in facts for r in refs):
         raise GroundingError("AI dẫn một mã chứng cứ không có trong phạm vi đã chọn.")
+    if any(facts[r].get("value") is None for r in refs):
+        raise GroundingError("AI dẫn một chứng cứ chưa có giá trị; hãy tạo lại hoặc kiểm tra phạm vi dữ liệu.")
     if len(refs) != len(set(refs)):
         raise GroundingError("AI dẫn trùng mã chứng cứ.")
     tokens = TOKEN.findall(text)
@@ -160,7 +162,7 @@ def validate_response(payload: Any, bundle: Mapping[str, Any], question: str = "
             raise GroundingError("Số nhận xét Gemini trả về không hợp lệ.")
         result[section] = [_statement(row, facts, terms) for row in rows]
     status = payload["answer_status"]
-    if status not in {"not_requested", "answered", "insufficient_data"}:
+    if not isinstance(status, str) or status not in {"not_requested", "answered", "insufficient_data"}:
         raise GroundingError("Trạng thái trả lời câu hỏi không hợp lệ.")
     if not question.strip():
         if status != "not_requested" or result["answer"]:
