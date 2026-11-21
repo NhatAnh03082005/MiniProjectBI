@@ -14,7 +14,7 @@ from .data import fingerprint_frame
 
 BASELINE_MINUTES = 195
 SMALL_SAMPLE = 200
-ANALYSIS_VERSION = "1.1"
+ANALYSIS_VERSION = "1.2"
 DIMENSIONS = {
     "traffic": ("traffic_level", "Traffic"),
     "weather": ("weather_name", "Weather"),
@@ -181,10 +181,13 @@ def _metrics(frame: pd.DataFrame) -> dict:
 
 def _group_record(label: str, frame: pd.DataFrame) -> dict:
     m = _metrics(frame)
-    return {"label": label, "n": len(frame), "average_minutes": m["average_minutes"],
+    valid_time_count = m["valid_time_count"] or 0
+    return {"label": label, "n": len(frame), "valid_time_count": valid_time_count,
+            "average_minutes": m["average_minutes"],
             "median_minutes": m["median_minutes"], "p90_minutes": m["p90_minutes"],
             "above_baseline_count": m["above_baseline_count"], "share_above_baseline": m["share_above_baseline"],
-            "small_n": 0 < len(frame) < SMALL_SAMPLE}
+            "small_n": 0 < len(frame) < SMALL_SAMPLE,
+            "small_time_n": 0 < valid_time_count < SMALL_SAMPLE}
 
 
 def _display(value, unit: str) -> str:
@@ -201,11 +204,14 @@ def _display(value, unit: str) -> str:
     return f"{text} {unit}".strip()
 
 
-def _facts(kpis: dict, tables: dict, scope: dict) -> list[dict]:
+def _facts(kpis: dict, tables: dict, scope: dict) -> tuple[list[dict], bool]:
     facts = []
+    evidence_truncated = False
 
     def add(label, value, unit, n=None, source="kpi", context=None):
+        nonlocal evidence_truncated
         if len(facts) >= 160:
+            evidence_truncated = True
             return
         fact = {"id": f"F{len(facts) + 1:03d}", "label": label, "value": value, "unit": unit,
                 "display": _display(value, unit), "n": n, "source": source}
@@ -244,52 +250,98 @@ def _facts(kpis: dict, tables: dict, scope: dict) -> list[dict]:
         elif key == "average_pickup_delay":
             sample_n = kpis["valid_pickup_delay_count"] or 0
         add(label, kpis[key], unit, sample_n, f"kpi/{key}")
+
+    # Reserve the bounded evidence budget for rules, scope and comparisons
+    # before optional group detail. A large category list must not hide them.
     add("Ngưỡng baseline P90 cố định, không phải SLA", BASELINE_MINUTES, "phút", source="rule/baseline")
     add("Ngưỡng gắn nhãn cỡ mẫu nhỏ", SMALL_SAMPLE, "bản ghi", source="rule/small_sample")
     add("Giới hạn khoảng cách hợp lệ", 50, "km", source="rule/distance")
-    for key, (_, title) in DIMENSIONS.items():
-        for row in tables[key]:
-            context = {"dimension": key, "group": row["label"], "small_n": row["small_n"]}
-            suffix = " (mẫu nhỏ)" if row["small_n"] else ""
-            add(f"{title} = {row['label']}: cỡ mẫu{suffix}", row["n"], "bản ghi", row["n"], f"group/{key}/n", context)
-            add(f"{title} = {row['label']}: thời lượng giao trung bình", row["average_minutes"], "phút", row["n"], f"group/{key}/average", context)
-    for row in tables["distance_band"]:
-        context = {"dimension": "distance_band", "group": row["label"], "valid_distance_only": True}
-        add(f"Khoảng cách {row['label']}: cỡ mẫu hợp lệ", row["n"], "bản ghi", row["n"], "group/distance_band/n", context)
-        add(f"Khoảng cách {row['label']}: thời lượng giao trung bình", row["average_minutes"], "phút", row["n"], "group/distance_band/average", context)
-        add(f"Khoảng cách {row['label']}: Haversine trung bình", row["average_distance"], "km", row["n"], "group/distance_band/distance", context)
-    for key in (*DIMENSIONS, "distance_band"):
-        eligible = [r for r in tables[key] if r["n"] >= SMALL_SAMPLE and r["average_minutes"] is not None
-                    and r["label"].strip().casefold() != "unknown"]
-        if len(eligible) < 2:
-            continue
-        ordered = sorted(eligible, key=lambda r: (r["average_minutes"], r["label"]))
-        low, high = ordered[0], ordered[-1]
-        add(f"{key}: chênh lệch trung bình giữa {high['label']} (cao nhất) và {low['label']} (thấp nhất), các nhóm đủ mẫu",
-            high["average_minutes"] - low["average_minutes"], "phút", source=f"comparison/{key}",
-            context={"high": high["label"], "low": low["label"], "high_n": high["n"], "low_n": low["n"],
-                     "high_average_minutes": high["average_minutes"], "low_average_minutes": low["average_minutes"], "minimum_n": SMALL_SAMPLE})
-    # Compare adjacent calendar dates only, with adequate data on BOTH days.
-    changes = []
-    for previous, current in zip(tables["daily"], tables["daily"][1:]):
-        if (_date(current["date"]) - _date(previous["date"])).days != 1:
-            continue
-        if previous["n"] < SMALL_SAMPLE or current["n"] < SMALL_SAMPLE \
-                or previous["average_minutes"] is None or current["average_minutes"] is None:
-            continue
-        changes.append((current["average_minutes"] - previous["average_minutes"], previous, current))
-    for direction, candidates in (("tăng", [r for r in changes if r[0] > 0]), ("giảm", [r for r in changes if r[0] < 0])):
-        if candidates:
-            change, previous, current = max(candidates, key=lambda r: abs(r[0]))
-            add(f"Mức {direction} trung bình lớn nhất giữa hai ngày lịch liền nhau đủ mẫu", abs(change), "phút", source="comparison/daily_average",
-                context={"from_date": previous["date"], "to_date": current["date"], "from_n": previous["n"], "to_n": current["n"],
-                         "from_average_minutes": previous["average_minutes"], "to_average_minutes": current["average_minutes"], "direction": direction})
     gap_days = sum(r["total_records"] == 0 for r in tables["daily"])
     add("Số ngày lịch không có bản ghi trong phạm vi đã lọc", gap_days, "ngày", source="calendar/gaps")
     if scope["selected_min_date"]:
         add("Ngày có dữ liệu đầu tiên trong bộ lọc", scope["selected_min_date"], "ngày lịch", source="scope/min_date")
         add("Ngày có dữ liệu cuối cùng trong bộ lọc", scope["selected_max_date"], "ngày lịch", source="scope/max_date")
-    return facts
+
+    priority_groups = set()
+    for key in (*DIMENSIONS, "distance_band"):
+        eligible = [r for r in tables[key] if r["valid_time_count"] >= SMALL_SAMPLE and r["average_minutes"] is not None
+                    and r["label"].strip().casefold() != "unknown"]
+        if len(eligible) < 2:
+            continue
+        ordered = sorted(eligible, key=lambda r: (r["average_minutes"], r["label"]))
+        low, high = ordered[0], ordered[-1]
+        priority_groups.update(((key, high["label"]), (key, low["label"])))
+        add(f"{key}: chênh lệch trung bình giữa {high['label']} (cao nhất) và {low['label']} (thấp nhất), các nhóm đủ mẫu",
+            high["average_minutes"] - low["average_minutes"], "phút", source=f"comparison/{key}",
+            context={"high": high["label"], "low": low["label"],
+                     "high_n": high["valid_time_count"], "low_n": low["valid_time_count"],
+                     "high_average_minutes": high["average_minutes"], "low_average_minutes": low["average_minutes"],
+                     "minimum_n": SMALL_SAMPLE})
+
+    # Compare adjacent calendar dates only, with enough nonblank durations on
+    # BOTH days; total record count is not the sample size of an average.
+    changes = []
+    for previous, current in zip(tables["daily"], tables["daily"][1:]):
+        if (_date(current["date"]) - _date(previous["date"])).days != 1:
+            continue
+        if (previous["valid_time_count"] < SMALL_SAMPLE or current["valid_time_count"] < SMALL_SAMPLE
+                or previous["average_minutes"] is None or current["average_minutes"] is None):
+            continue
+        changes.append((current["average_minutes"] - previous["average_minutes"], previous, current))
+    for direction, candidates in (("tăng", [r for r in changes if r[0] > 0]), ("giảm", [r for r in changes if r[0] < 0])):
+        if not candidates:
+            continue
+        change, previous, current = max(candidates, key=lambda r: abs(r[0]))
+        context = {"from_date": previous["date"], "to_date": current["date"],
+                   "from_n": previous["valid_time_count"], "to_n": current["valid_time_count"],
+                   "from_average_minutes": previous["average_minutes"], "to_average_minutes": current["average_minutes"],
+                   "direction": direction}
+        add(f"Mức {direction} trung bình lớn nhất giữa hai ngày lịch liền nhau đủ mẫu",
+            abs(change), "phút", source="comparison/daily_average", context=context)
+        # These values need their own fact tokens: dates, means and sample
+        # sizes inside context cannot be copied as raw numbers into AI prose.
+        for field, label, unit in (
+            ("from_date", "Ngày trước trong cặp", "ngày lịch"),
+            ("to_date", "Ngày sau trong cặp", "ngày lịch"),
+            ("from_average_minutes", "Thời lượng giao trung bình ngày trước", "phút"),
+            ("to_average_minutes", "Thời lượng giao trung bình ngày sau", "phút"),
+            ("from_n", "Số thời lượng hợp lệ ngày trước", "bản ghi"),
+            ("to_n", "Số thời lượng hợp lệ ngày sau", "bản ghi"),
+        ):
+            source_suffix = {"from_average_minutes": "from_average", "to_average_minutes": "to_average"}.get(field, field)
+            sample_n = context["from_n"] if field.startswith("from_") else context["to_n"]
+            add(f"{label} có mức {direction} lớn nhất", context[field], unit, sample_n,
+                source=f"comparison/daily_average/{source_suffix}", context=context)
+
+    def group_details(key, title, row):
+        count_context = {"dimension": key, "group": row["label"], "small_n": row["small_n"]}
+        mean_context = {**count_context, "small_n": row["small_time_n"]}
+        if key == "distance_band":
+            count_context["valid_distance_only"] = True
+            mean_context["valid_distance_only"] = True
+        suffix = " (mẫu nhỏ)" if row["small_n"] else ""
+        add(f"{title} = {row['label']}: cỡ mẫu{suffix}", row["n"], "bản ghi", row["n"],
+            f"group/{key}/n", count_context)
+        add(f"{title} = {row['label']}: thời lượng giao trung bình", row["average_minutes"], "phút",
+            row["valid_time_count"], f"group/{key}/average", mean_context)
+        if row["valid_time_count"] != row["n"]:
+            add(f"{title} = {row['label']}: số thời lượng hợp lệ", row["valid_time_count"], "bản ghi",
+                row["valid_time_count"], f"group/{key}/valid_time_count", mean_context)
+        if key == "distance_band":
+            add(f"Khoảng cách {row['label']}: Haversine trung bình", row["average_distance"], "km",
+                row["n"], "group/distance_band/distance", count_context)
+
+    # Keep both groups behind a comparison available for verification even
+    # when lower-priority category details must be omitted at the fact limit.
+    for prioritized in (True, False):
+        for key, (_, title) in DIMENSIONS.items():
+            for row in tables[key]:
+                if ((key, row["label"]) in priority_groups) == prioritized:
+                    group_details(key, title, row)
+        for row in tables["distance_band"]:
+            if (("distance_band", row["label"]) in priority_groups) == prioritized:
+                group_details("distance_band", "Khoảng cách", row)
+    return facts, evidence_truncated
 
 
 def build_analysis(frame: pd.DataFrame, filters: FilterContext = FilterContext(), source_meta: dict | None = None) -> dict:
@@ -365,11 +417,12 @@ def build_analysis(frame: pd.DataFrame, filters: FilterContext = FilterContext()
     source.update(source_fingerprint=fingerprint_frame(frame), global_min_date=scope["global_min_date"], global_max_date=scope["global_max_date"])
     identity = json.dumps({"version": ANALYSIS_VERSION, "rules": {"baseline_minutes": 195, "max_distance_km": 50, "small_sample": 200},
                            "fingerprint": source["source_fingerprint"], "filters": asdict(filters)}, sort_keys=True, ensure_ascii=False)
+    facts, evidence_truncated = _facts(kpis, tables, scope)
     return {
         "schema_version": "1", "snapshot_id": hashlib.sha256(identity.encode("utf-8")).hexdigest()[:24],
         "generated_at": metadata.get("fetched_at") or datetime.now(timezone.utc).isoformat(), "filters": asdict(filters),
         "source": source, "scope": scope, "kpis": kpis, "tables": tables,
-        "facts": _facts(kpis, tables, scope),
+        "facts": facts,
         "limitations": [
             "Phân tích trên tập Fact được chấp nhận; không thay thế kiểm tra chất lượng dữ liệu raw.",
             "Chênh lệch giữa các nhóm chỉ mang tính mô tả, không chứng minh quan hệ nhân quả.",
@@ -380,7 +433,9 @@ def build_analysis(frame: pd.DataFrame, filters: FilterContext = FilterContext()
             "Bộ lọc ứng dụng độc lập với Power BI Desktop; cần chọn cùng ngữ cảnh để đối soát.",
             "Power BI dùng Import; dữ liệu trên báo cáo có thể khác DDS nếu chưa refresh.",
             "Nhóm nhỏ cần thận trọng; nhóm Unknown vẫn xuất hiện trong bảng nhưng không dùng xếp hạng chênh lệch.",
-        ],
+        ] + (["Danh sách chứng cứ gửi AI đã rút gọn; một số nhóm chi tiết không có trong chứng cứ. "
+              "Các KPI, quy tắc, phạm vi và so sánh chính vẫn được giữ; xem bảng nhóm đầy đủ để đối chiếu."]
+             if evidence_truncated else []),
         "allowed_terms": sorted({"P90", "P95", "SLA", "DDS", "Power BI", "Unknown", "Store (0,0)",
                                   *[r["label"] for key in DIMENSIONS for r in tables[key]],
                                   *[r["label"] for r in tables["distance_band"]]}),

@@ -142,6 +142,90 @@ class AnalyticsTests(unittest.TestCase):
         tiny = next(r for r in result["tables"]["traffic"] if r["label"] == "Tiny")
         self.assertTrue(tiny["small_n"])
 
+    def test_group_mean_samples_use_nonblank_times_instead_of_total_rows(self):
+        frame = frame_for([None] * 199 + [10] + [None] * 199 + [100],
+                          traffic_level=["Low"] * 200 + ["Jam"] * 200)
+        result = build_analysis(frame)
+        self.assertEqual(result["kpis"]["total_records"], 400)
+        self.assertEqual(result["kpis"]["valid_time_count"], 2)
+        self.assertEqual(result["kpis"]["average_minutes"], 55)
+        for row in result["tables"]["traffic"]:
+            self.assertEqual((row["n"], row["valid_time_count"]), (200, 1))
+            self.assertFalse(row["small_n"])
+            self.assertTrue(row["small_time_n"])
+        self.assertFalse(any(f["source"] == "comparison/traffic" for f in result["facts"]))
+        counts = [f for f in result["facts"] if f["source"] == "group/traffic/n"]
+        averages = [f for f in result["facts"] if f["source"] == "group/traffic/average"]
+        valid_counts = [f for f in result["facts"] if f["source"] == "group/traffic/valid_time_count"]
+        self.assertTrue(all(f["n"] == 200 and not f["context"]["small_n"] for f in counts))
+        self.assertTrue(all(f["n"] == 1 and f["context"]["small_n"] for f in averages))
+        self.assertEqual([f["value"] for f in valid_counts], [1, 1])
+        distance_mean = next(f for f in result["facts"] if f["source"] == "group/distance_band/distance")
+        time_mean = next(f for f in result["facts"] if f["source"] == "group/distance_band/average")
+        self.assertEqual(distance_mean["n"], 400)
+        self.assertEqual(time_mean["n"], 2)
+
+    def test_daily_comparisons_use_valid_samples_and_supply_date_value_tokens(self):
+        sparse = frame_for([None] * 199 + [10] + [None] * 199 + [20],
+                           ["2022-03-01"] * 200 + ["2022-03-02"] * 200)
+        self.assertFalse(any(f["source"] == "comparison/daily_average"
+                             for f in build_analysis(sparse)["facts"]))
+        frame = frame_for([10] * 200 + [None] * 10 + [20] * 200 + [None] * 10,
+                          ["2022-03-01"] * 210 + ["2022-03-02"] * 210)
+        result = build_analysis(frame)
+        daily_facts = {f["source"]: f for f in result["facts"]
+                       if f["source"].startswith("comparison/daily_average")}
+        prefix = "comparison/daily_average"
+        self.assertEqual(len(daily_facts), 7)
+        self.assertEqual(daily_facts[prefix]["value"], 10)
+        for suffix, value in (("from_date", "2022-03-01"), ("to_date", "2022-03-02"),
+                              ("from_average", 10), ("to_average", 20), ("from_n", 200), ("to_n", 200)):
+            fact = daily_facts[prefix + "/" + suffix]
+            self.assertEqual(fact["value"], value)
+            self.assertEqual(fact["n"], 200)
+            self.assertEqual(fact["context"]["direction"], "tăng")
+        self.assertEqual(daily_facts[prefix]["context"]["from_n"], 200)
+        self.assertEqual(result["tables"]["daily"][0]["n"], 210)
+        # The exact dates and means must be usable without bypassing the
+        # numeric guard or copying a number from unstructured context.
+        from ai.grounding import validate_response
+        refs = [daily_facts[prefix + "/" + suffix]["id"]
+                for suffix in ("from_date", "to_date", "from_average", "to_average")]
+        text = ("Thời lượng giao trung bình từ ngày {{" + refs[0] + "}} đến ngày {{" + refs[1]
+                + "}} thay đổi từ {{" + refs[2] + "}} thành {{" + refs[3] + "}}.")
+        payload = {"summary": [{"text": text, "evidence_ids": refs}],
+                   "explanations": [{"text": text, "evidence_ids": refs}],
+                   "answer": [], "answer_status": "not_requested"}
+        rendered = validate_response(payload, result)["explanations"][0]["text"]
+        self.assertIn("2022-03-01", rendered)
+        self.assertIn("2022-03-02", rendered)
+        self.assertIn("10,00 phút", rendered)
+        self.assertIn("20,00 phút", rendered)
+
+    def test_evidence_limit_preserves_scope_comparisons_and_reports_truncation(self):
+        times, dates, categories = [], [], []
+        for i in range(80):
+            times.extend([10 + i] * 100 + [15 + i] * 100)
+            dates.extend(["2022-03-01"] * 100 + ["2022-03-02"] * 100)
+            categories.extend([f"Category {i:02d}"] * 200)
+        result = build_analysis(frame_for(times, dates, category_name=categories))
+        self.assertEqual(len(result["facts"]), 160)
+        self.assertEqual(len(result["tables"]["category"]), 80)
+        sources = {f["source"] for f in result["facts"]}
+        self.assertTrue({"rule/baseline", "rule/small_sample", "rule/distance", "calendar/gaps",
+                         "scope/min_date", "scope/max_date", "comparison/category",
+                         "comparison/daily_average", "comparison/daily_average/from_date",
+                         "comparison/daily_average/to_date"}.issubset(sources))
+        comparison = next(f for f in result["facts"] if f["source"] == "comparison/category")
+        for label in (comparison["context"]["high"], comparison["context"]["low"]):
+            for source in ("group/category/n", "group/category/average"):
+                self.assertTrue(any(f["source"] == source and f["context"]["group"] == label
+                                    for f in result["facts"]))
+        self.assertEqual(len({f["id"] for f in result["facts"]}), 160)
+        self.assertTrue(any("rút gọn" in item for item in result["limitations"]))
+        small = build_analysis(frame_for([10, 20]))
+        self.assertFalse(any("rút gọn" in item for item in small["limitations"]))
+
     def test_daily_changes_compare_adjacent_calendar_dates_only(self):
         frame = frame_for([10] * 200 + [210] * 200, ["2022-03-01"] * 200 + ["2022-03-03"] * 200)
         result = build_analysis(frame, FilterContext(dates=("2022-03-01", "2022-03-03")))
