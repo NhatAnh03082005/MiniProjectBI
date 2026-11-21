@@ -56,6 +56,11 @@ class AppLifecycleTests(unittest.TestCase):
         self.load = patch("ai.data.load_warehouse", return_value=(self.frame, self.source)).start()
         self.generate = patch("ai.gemini.generate", side_effect=self.response).start()
         self.models = patch("ai.gemini.list_models", return_value=["fixture-model-a", "fixture-model-b"]).start()
+        # UI tests never touch the current Windows user's actual credentials.
+        self.credential_load = patch("ai.credentials.load_key", return_value=None).start()
+        self.credential_save = patch("ai.credentials.save_key").start()
+        self.credential_delete = patch("ai.credentials.delete_key").start()
+        self.credential_supported = patch("ai.credentials.is_supported", return_value=True).start()
         self.addCleanup(patch.stopall)
         self.app = AppTest.from_file(str(APP), default_timeout=25).run()
         self.assert_clean()
@@ -146,6 +151,103 @@ class AppLifecycleTests(unittest.TestCase):
         self.assertEqual(state(self.app, "_ai_result")["snapshot_id"], saved["snapshot_id"])
         self.assertNotIn(FAKE_KEY, json.dumps(saved))
         self.assertNotIn(FAKE_KEY, json.dumps(state(self.app, "_bundle")))
+
+    def test_saved_key_loads_masked_once_and_session_clear_does_not_reload(self):
+        self.credential_load.return_value = FAKE_KEY
+        saved = AppTest.from_file(str(APP), default_timeout=25).run()
+        self.assertEqual(len(saved.exception), 0)
+        self.assertEqual(saved.text_input(key="gemini_api_key").proto.type, TextInputProto.PASSWORD)
+        self.assertEqual(saved.text_input(key="gemini_api_key").value, FAKE_KEY)
+        reads = self.credential_load.call_count
+        saved.button(key="clear_key").click().run()
+        saved.run()
+        self.assertEqual(saved.text_input(key="gemini_api_key").value, "")
+        self.assertEqual(self.credential_load.call_count, reads)
+        self.assertTrue(saved.button(key="save_key").disabled)
+        self.credential_save.assert_not_called()
+        self.credential_delete.assert_not_called()
+
+    def test_save_is_explicit_and_delete_clears_saved_key_and_current_session(self):
+        store = {"key": None}
+        self.credential_load.side_effect = lambda: store["key"]
+        self.credential_save.side_effect = lambda value: store.update(key=value)
+        self.credential_delete.side_effect = lambda: store.update(key=None)
+        self.enter_key()
+        self.credential_save.assert_not_called()
+        self.app.button(key="save_key").click().run()
+        self.assert_clean()
+        self.credential_save.assert_called_once_with(FAKE_KEY)
+        self.assertEqual(store["key"], FAKE_KEY)
+
+        second = AppTest.from_file(str(APP), default_timeout=25).run()
+        self.assertEqual(second.text_input(key="gemini_api_key").value, FAKE_KEY)
+        second.button(key="delete_saved_key").click().run()
+        self.assertEqual(len(second.exception), 0)
+        self.assertIsNone(store["key"])
+        self.assertEqual(second.text_input(key="gemini_api_key").value, "")
+        self.assertTrue(second.button(key="generate_summary").disabled)
+        third = AppTest.from_file(str(APP), default_timeout=25).run()
+        self.assertEqual(third.text_input(key="gemini_api_key").value, "")
+        self.generate.assert_not_called()
+        self.models.assert_not_called()
+
+    def test_credential_failures_are_safe_and_keep_the_entered_session_key(self):
+        self.credential_load.side_effect = RuntimeError("private store error " + FAKE_KEY)
+        fresh = AppTest.from_file(str(APP), default_timeout=25).run()
+        self.assertEqual(len(fresh.exception), 0)
+        self.assertEqual(fresh.text_input(key="gemini_api_key").value, "")
+        self.assertTrue(len(fresh.warning))
+        self.assertFalse(any(FAKE_KEY in warning.value for warning in fresh.warning))
+        self.enter_key()
+        self.credential_save.side_effect = RuntimeError("private store error " + FAKE_KEY)
+        self.app.button(key="save_key").click().run()
+        self.assert_clean()
+        self.assertEqual(self.app.text_input(key="gemini_api_key").value, FAKE_KEY)
+        self.assertTrue(len(self.app.error))
+        self.assertFalse(any(FAKE_KEY in error.value for error in self.app.error))
+        self.credential_delete.side_effect = RuntimeError("private store error " + FAKE_KEY)
+        self.app.button(key="delete_saved_key").click().run()
+        self.assert_clean()
+        self.assertEqual(self.app.text_input(key="gemini_api_key").value, FAKE_KEY)
+        self.assertFalse(any(FAKE_KEY in error.value for error in self.app.error))
+
+    def test_group_bar_chart_axes_match_their_actual_fields(self):
+        self.load_data()
+        specs = [json.loads(chart.proto.spec) for chart in self.app.get("vega_lite_chart")]
+        bar = next(spec for spec in specs if spec.get("mark", {}).get("type") == "bar")
+        self.assertEqual(bar["encoding"]["x"]["field"], "average_minutes")
+        self.assertEqual(bar["encoding"]["x"]["title"], "Thời gian trung bình (phút)")
+        self.assertEqual(bar["encoding"]["y"]["field"], "label")
+        self.assertEqual(bar["encoding"]["y"]["title"], "Nhóm")
+
+    def test_day_period_matrix_preserves_each_weekday_and_its_sample_size(self):
+        self.frame.loc[3, "time_period"] = "Morning"
+        self.load_data()
+        self.app.selectbox(key="evidence_group").set_value("Ngày × khung giờ").run()
+        self.assert_clean()
+        matrices = [table.value for table in self.app.dataframe if table.value.index.name == "Ngày"]
+        self.assertEqual(len(matrices), 2)
+        means, counts = matrices
+        self.assertEqual(means.loc["Monday", "Morning"], 130)
+        self.assertEqual(means.loc["Friday", "Morning"], 90)
+        self.assertEqual(counts.loc["Monday", "Morning"], 1)
+        self.assertEqual(counts.loc["Friday", "Morning"], 1)
+        self.assertTrue(pd.isna(means.loc["Monday", "Evening"]))
+        self.assertTrue(pd.isna(counts.loc["Monday", "Evening"]))
+        specs = [json.loads(chart.proto.spec) for chart in self.app.get("vega_lite_chart")]
+        self.assertFalse(any(spec.get("mark", {}).get("type") == "bar" for spec in specs))
+
+    def test_failed_explicit_retry_does_not_claim_the_filter_changed(self):
+        self.load_data()
+        self.enter_key()
+        self.generate_summary()
+        self.generate.side_effect = RuntimeError("synthetic service failure")
+        self.app.button(key="generate_summary").click().run()
+        self.assert_clean()
+        self.assertTrue(len(self.app.error))
+        self.assertIsNone(state(self.app, "_ai_result"))
+        self.assertFalse(state(self.app, "_ai_stale"))
+        self.assertFalse(any("Phạm vi hoặc thiết lập đã thay đổi" in info.value for info in self.app.info))
 
     def test_filters_model_and_question_each_invalidate_without_auto_request(self):
         self.load_data()

@@ -11,7 +11,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from ai import analytics, data, gemini as Gemini
+from ai import analytics, credentials, data, gemini as Gemini
 from ai.grounding import GroundingError, validate_response
 
 
@@ -33,16 +33,29 @@ h3 { font-size: 1.08rem !important; }
   border-radius: 10px; padding: 12px 14px; min-height: 108px;
 }
 [data-testid="stMetricLabel"] p { font-size: .85rem; white-space: normal; }
-[data-testid="stMetricValue"] { font-size: 1.5rem; }
+[data-testid="stMetricValue"] { font-size: 1.5rem; white-space: normal; }
+[data-testid="stMetricValue"] > div {
+  white-space: normal; overflow: visible; overflow-wrap: anywhere; text-overflow: clip;
+}
 [data-testid="stText"] { font-family: 'Segoe UI', Arial, sans-serif; font-size: 1rem; line-height: 1.65; }
 button[kind="primary"] { background: #FF9900; color: #232F3E; border-color: #FF9900; }
 [data-testid="stTabs"] { margin-top: 1.2rem; }
+.st-key-kpi_grid { container-type: inline-size; container-name: kpis; }
+.st-key-kpi_grid [data-testid="stHorizontalBlock"] {
+  display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem;
+}
+.st-key-kpi_grid [data-testid="stColumn"] { width: auto !important; min-width: 0 !important; }
+@container kpis (min-width: 1100px) {
+  .st-key-kpi_grid [data-testid="stHorizontalBlock"] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@container kpis (max-width: 560px) {
+  .st-key-kpi_grid [data-testid="stHorizontalBlock"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container kpis (max-width: 360px) {
+  .st-key-kpi_grid [data-testid="stHorizontalBlock"] { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 1100px) {
-  .st-key-kpi_grid [data-testid="stHorizontalBlock"],
   .st-key-filter_grid [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
-  .st-key-kpi_grid [data-testid="stColumn"] {
-    flex: 1 1 calc(33.333% - 1rem) !important; min-width: 170px !important;
-  }
   .st-key-filter_grid [data-testid="stColumn"] {
     flex: 1 1 180px !important; min-width: 180px !important;
   }
@@ -60,11 +73,48 @@ def _invalidate_ai() -> None:
 
 
 def _clear_key() -> None:
-    st.session_state.pop("gemini_api_key", None)
+    # Keep the key initialized so a later rerun does not immediately reload it
+    # from this user's optional Windows credential store.
+    st.session_state["gemini_api_key"] = ""
     st.session_state.pop("_model_choices", None)
     st.session_state.pop("model_choice", None)
     st.session_state["gemini_model"] = Gemini.DEFAULT_MODEL
     _invalidate_ai()
+
+
+def _load_saved_key_once() -> None:
+    if "gemini_api_key" in st.session_state:
+        return
+    try:
+        st.session_state["gemini_api_key"] = credentials.load_key() or ""
+    except credentials.CredentialStoreError as error:
+        st.session_state["gemini_api_key"] = ""
+        st.session_state["_credential_notice"] = ("warning", str(error))
+    except Exception:
+        st.session_state["gemini_api_key"] = ""
+        st.session_state["_credential_notice"] = ("warning", "Chưa đọc được key đã lưu; hãy nhập key cho phiên này.")
+
+
+def _save_key_on_machine() -> None:
+    try:
+        credentials.save_key(st.session_state.get("gemini_api_key", "").strip())
+        st.session_state["_credential_notice"] = (
+            "success", "Đã lưu key trong Windows Credential Manager của tài khoản hiện tại.")
+    except credentials.CredentialStoreError as error:
+        st.session_state["_credential_notice"] = ("error", str(error))
+    except Exception:
+        st.session_state["_credential_notice"] = ("error", "Chưa lưu được key; key vẫn dùng được trong phiên này.")
+
+
+def _delete_saved_key() -> None:
+    try:
+        credentials.delete_key()
+        _clear_key()
+        st.session_state["_credential_notice"] = ("success", "Đã xóa key lưu trên máy và key của phiên hiện tại.")
+    except credentials.CredentialStoreError as error:
+        st.session_state["_credential_notice"] = ("error", str(error))
+    except Exception:
+        st.session_state["_credential_notice"] = ("error", "Chưa xóa được key đã lưu trên máy.")
 
 
 def _key_changed() -> None:
@@ -146,8 +196,9 @@ def _sidebar() -> tuple:
                     st.error("Chưa tải được dữ liệu. Kiểm tra tên SQL Server, database, ODBC Driver và quyền tài khoản Windows rồi thử lại.")
 
         st.subheader("Gemini")
+        _load_saved_key_once()
         st.text_input("Gemini API key", type="password", key="gemini_api_key", on_change=_key_changed,
-                      help="Khóa chỉ dùng trong phiên hiện tại, không được ghi vào file tải xuống.")
+                      help="Key được che trên giao diện. Chỉ ghi nhớ trên máy khi bấm nút lưu; không ghi vào source hoặc file tải xuống.")
         if "gemini_model" not in st.session_state:
             st.session_state["gemini_model"] = Gemini.DEFAULT_MODEL
         st.text_input("Mô hình Gemini", key="gemini_model", on_change=_invalidate_ai)
@@ -166,6 +217,18 @@ def _sidebar() -> tuple:
             st.selectbox("Chọn từ danh sách", choices, index=None, placeholder="Chọn để điền tên mô hình",
                          key="model_choice", on_change=_use_listed_model)
         st.button("Xóa khóa phiên", key="clear_key", width="stretch", on_click=_clear_key)
+        store_supported = credentials.is_supported()
+        st.button("Lưu key trên máy", key="save_key", width="stretch", on_click=_save_key_on_machine,
+                  disabled=not (store_supported and key))
+        st.button("Xóa key đã lưu", key="delete_saved_key", width="stretch", on_click=_delete_saved_key,
+                  disabled=not store_supported,
+                  help="Xóa key khỏi Windows Credential Manager và xóa key của phiên hiện tại.")
+        st.caption("Lưu key là tùy chọn, chỉ áp dụng cho tài khoản Windows trên máy này. “Xóa khóa phiên” vẫn giữ key đã lưu trên máy.")
+        if not store_supported:
+            st.caption("Máy này không hỗ trợ Windows Credential Manager; vẫn có thể dùng key trong phiên.")
+        notice = st.session_state.pop("_credential_notice", None)
+        if notice:
+            getattr(st, notice[0])(notice[1])
         st.caption("Chỉ gọi Gemini khi bạn bấm nút. Chi phí và hạn mức tùy tài khoản, mô hình đang dùng.")
     return connection
 
@@ -270,6 +333,8 @@ def _show_statements(title: str, statements: list[dict], bundle: dict) -> None:
 
 def _generate(bundle: dict, context: str, question: str = "") -> None:
     _invalidate_ai()
+    # A failed explicit retry is an API failure, not a change of filter context.
+    st.session_state["_ai_stale"] = False
     try:
         with st.spinner("Gemini đang đọc các số liệu đã tính…"):
             response = Gemini.generate(api_key=st.session_state["gemini_api_key"].strip(),
@@ -280,7 +345,6 @@ def _generate(bundle: dict, context: str, question: str = "") -> None:
             "validated": validated, "model": response.model, "model_version": response.model_version,
             "response_id": response.response_id, "usage": response.usage,
         }
-        st.session_state["_ai_stale"] = False
     except GroundingError as error:
         st.error(str(error))
     except Gemini.GeminiError as error:
@@ -345,11 +409,10 @@ def _evidence_tab(bundle: dict | None) -> None:
     with st.expander("Theo ngày và theo nhóm", expanded=False):
         daily = pd.DataFrame(tables.get("daily", []))
         if not daily.empty and "date" in daily:
-            count_field = "total_records" if "total_records" in daily else "n"
             count_column, average_column = st.columns(2)
             with count_column:
                 st.write("Số bản ghi theo ngày")
-                st.line_chart(daily, x="date", y=count_field, color=BLUE, height=230)
+                st.line_chart(daily, x="date", y="total_records", color=BLUE, height=230)
             with average_column:
                 st.write("Thời gian giao trung bình theo ngày (phút)")
                 if "average_minutes" in daily and pd.to_numeric(daily["average_minutes"], errors="coerce").notna().any():
@@ -366,17 +429,41 @@ def _evidence_tab(bundle: dict | None) -> None:
         choice = st.selectbox("Bảng so sánh", list(groups), key="evidence_group")
         group = pd.DataFrame(tables.get(groups[choice], []))
         if not group.empty:
-            if {"label", "average_minutes"}.issubset(group.columns):
+            day_period = groups[choice] == "day_period"
+            if day_period:
+                ordered = group.sort_values("day_of_week_number")
+                days = ordered["day_name"].drop_duplicates().tolist()
+                observed_periods = set(group["time_period"])
+                preferred = ("Morning", "Afternoon", "Evening", "Night", "Unknown")
+                periods = [p for p in preferred if p in observed_periods]
+                periods += sorted(observed_periods.difference(preferred))
+                means = group.pivot(index="day_name", columns="time_period", values="average_minutes").reindex(index=days, columns=periods)
+                counts = group.pivot(index="day_name", columns="time_period", values="valid_time_count").reindex(index=days, columns=periods)
+                mean_tab, count_tab = st.tabs(["Trung bình (phút)", "Cỡ mẫu thời lượng"])
+                with mean_tab:
+                    st.dataframe(means.rename_axis(index="Ngày", columns="Khung giờ").round(2), width="stretch")
+                with count_tab:
+                    st.dataframe(counts.rename_axis(index="Ngày", columns="Khung giờ").astype("Int64"), width="stretch")
+                st.caption("Mỗi ô là một ngày trong tuần × khung giờ. Đọc thời gian trung bình cùng cỡ mẫu thời lượng hợp lệ; ô trống không có giá trị để so sánh.")
+            elif {"label", "average_minutes"}.issubset(group.columns):
+                # Streamlit assigns these labels before rotating the chart.
                 st.bar_chart(group, x="label", y="average_minutes", horizontal=True,
-                             color=BLUE, x_label="Thời gian trung bình (phút)", y_label="Nhóm", height=300)
-            display = group.copy()
+                             color=BLUE, x_label="Nhóm", y_label="Thời gian trung bình (phút)", height=300)
+            display = group.drop(columns="label") if day_period else group.copy()
             if "share_above_baseline" in display:
                 display["share_above_baseline"] = display["share_above_baseline"].map(
                     lambda value: _fmt(None if pd.isna(value) else value * 100, 2, "%"))
-            st.dataframe(display.rename(columns={"label": "Nhóm", "n": "Số bản ghi", "average_minutes": "Trung bình (phút)",
-                                               "median_minutes": "Trung vị (phút)", "p90_minutes": "P90 (phút)",
-                                               "share_above_baseline": "Tỷ lệ vượt mốc", "small_n": "Mẫu nhỏ",
-                                               "average_distance": "Khoảng cách TB (km)"}), hide_index=True, width="stretch")
+            display = display.rename(columns={"label": "Nhóm", "n": "Số bản ghi", "average_minutes": "Trung bình (phút)",
+                                              "median_minutes": "Trung vị (phút)", "p90_minutes": "P90 (phút)",
+                                              "share_above_baseline": "Tỷ lệ vượt mốc", "small_n": "Mẫu nhỏ",
+                                              "valid_time_count": "Số thời lượng hợp lệ", "small_time_n": "Mẫu thời lượng nhỏ",
+                                              "day_name": "Ngày", "day_of_week_number": "Thứ tự ngày", "time_period": "Khung giờ",
+                                              "average_distance": "Khoảng cách TB (km)"})
+            if day_period:
+                with st.expander("Chi tiết từng ngày và khung giờ"):
+                    st.dataframe(display, hide_index=True, width="stretch")
+            else:
+                st.dataframe(display, hide_index=True, width="stretch")
         else:
             st.info("Không có bản ghi cho bảng so sánh này.")
     with st.expander("Phạm vi, nguồn và cách đối chiếu"):
