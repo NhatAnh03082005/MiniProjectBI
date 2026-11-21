@@ -28,6 +28,8 @@ class DatabaseConfig:
 
 # No user text is interpolated into SQL. LEFT JOIN preserves any orphan for
 # validation instead of silently dropping it. No coordinates are selected.
+# Row order is immaterial: fingerprint_frame sorts locally. Avoid a full DDS
+# sort here and the corresponding SQL Server memory grant.
 WAREHOUSE_SELECT = """
 SELECT
     f.delivery_key, f.order_id, f.date_key, f.delivery_count,
@@ -48,7 +50,6 @@ LEFT JOIN dw.dim_delivery_condition AS c
 LEFT JOIN dw.dim_vehicle AS v ON v.vehicle_key = f.vehicle_key
 LEFT JOIN dw.dim_area AS a ON a.area_key = f.area_key
 LEFT JOIN dw.dim_category AS g ON g.category_key = f.category_key
-ORDER BY f.delivery_key
 """.strip()
 
 

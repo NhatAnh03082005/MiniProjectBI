@@ -103,6 +103,7 @@ Trên snapshot đã kiểm tra ngày 17/11/2026: toàn bộ Fact có **43.594 b�
 | Không tìm thấy Python phù hợp | Cài CPython 3.11–3.13 thông thường 64-bit, mở terminal mới rồi chạy lại. `py -0p` giúp xem các bản Python đã đăng ký; tránh bản có hậu tố `t` |
 | Thiếu thư viện hoặc cài dở | Chạy lại `run.ps1 -Install`. Nếu `.ai_venv` được tạo bằng Python không tương thích, dừng app và đổi tên thư mục này để tạo môi trường mới; không sửa môi trường Mage/dbt |
 | Thiếu ODBC / không đọc được DDS | Kiểm tra driver đã cài, tên instance/database, dịch vụ SQL Server và quyền Windows. Kiểm tra sáu bảng `dw` ở bước 1; chỉ có staging thì cần hoàn tất dbt |
+| Kết nối SQL được nhưng đọc DDS bị timeout | Kiểm tra chờ cấp bộ nhớ SQL (`RESOURCE_SEMAPHORE`) và các truy vấn đang chạy. Bản đọc DDS hiện không sắp xếp toàn bộ dữ liệu trong SQL; fingerprint tự sắp xếp ở Python. Không chỉ tăng timeout hoặc đổi sang đọc dữ liệu chưa commit |
 | Nút tạo AI chưa bật | Cần có bản ghi trong phạm vi đang chọn, key đã áp dụng và tên model. Có thể xem dữ liệu trước khi nhập key |
 | Key/model bị từ chối, hết quota hoặc Gemini tạm lỗi | Kiểm tra key, Internet, quota và **Xem mô hình khả dụng**. Chờ rồi chủ động thử lại nếu lỗi dịch vụ; ứng dụng không tự gọi lặp hoặc tự đổi model |
 | Kết quả bị từ chối vì số/mã dẫn chứng | Phản hồi không vượt qua kiểm tra; không được hiển thị như kết quả hợp lệ. Bấm tạo lại; đối chiếu bảng số liệu nếu lỗi lặp lại |
@@ -151,6 +152,8 @@ Remove-Item Env:\RUN_AI_DDS_TESTS
 ```
 
 Đã kiểm tra ngày 17/11/2026: **60/60 kiểm thử đạt**, gồm test giao diện và đối soát SQL chỉ đọc trong 9 phạm vi lọc; `pip check` đạt. Bản sao chỉ chứa source cũng đã tạo venv mới, cài thư viện, khởi động bằng Windows PowerShell 5.1 trên đường dẫn có dấu cách và đạt 10/10 test giao diện. Kiểm thử xác nhận key của một phiên không tự xuất hiện ở phiên khác.
+
+Cập nhật ngày 21/11/2026: đã sửa trường hợp SQL Server thiếu bộ nhớ cấp cho truy vấn đọc DDS bằng cách bỏ `ORDER BY` không cần thiết. Trên máy kiểm tra, bộ nhớ mong muốn trong kế hoạch giảm từ 40.200 KB xuống 6.896 KB; đọc đủ 43.594 bản ghi mất khoảng 4,4 giây. Fingerprint của toàn bộ các trường được đọc giống bản truy vấn cũ; join, isolation, timeout và KPI được giữ nguyên. **61/61 kiểm thử đạt**, gồm regression về thứ tự dòng và đối soát SQL trong 9 phạm vi. Thời gian đọc/bộ nhớ thực tế tùy dữ liệu và máy chạy.
 
 Trước khi bàn giao/quay demo trên máy khác: mở app bằng source đã pull, lấy DDS, nhập key của người chạy, tạo summary, mở chứng cứ, hỏi một câu và đổi bộ lọc để tạo lại. Test dùng HTTP giả lập không thay thế bước gọi Gemini thật. Ngày 17/11/2026 đã nghiệm thu Gemini thật trên toàn bộ dữ liệu, câu hỏi Jam–Low và bộ lọc Grocery; môi trường/quota của người nhận vẫn cần kiểm tra riêng.
 
