@@ -77,9 +77,12 @@ Bấm **Kết nối và tải dữ liệu**. Kết nối dùng **Windows Authent
 1. Tạo/lấy Gemini API key tại [Google AI Studio](https://aistudio.google.com/apikey). Mỗi thành viên có thể dùng key của mình.
 2. Dán key vào ô mật khẩu **Gemini API key**, rồi nhấn `Enter` hoặc bấm ra ngoài ô để áp dụng.
 3. Giữ model mặc định `gemini-3.5-flash-lite`, hoặc bấm **Xem mô hình khả dụng** và chọn model mà key được phép dùng. Quyền truy cập, quota và chi phí phụ thuộc tài khoản/model.
-4. Thu thanh bên lại trước khi quay video hoặc trình bày.
+4. Nếu muốn dùng lại key trên máy này, bấm **Lưu key trên máy**. Ứng dụng lưu vào Windows Credential Manager của tài khoản Windows hiện tại; các phiên sau trên cùng tài khoản/máy có thể nạp lại key. Đây là lựa chọn chủ động, không phải yêu cầu để chạy AI.
+5. Thu thanh bên lại trước khi quay video hoặc trình bày.
 
-**Không cần sửa code hay tạo file `.env` để nhập key.** Ô key trống khi mở một phiên mới; các phiên không tự chia sẻ key. Khóa chỉ giữ trong bộ nhớ phiên, không ghi vào source, URL, prompt, log hoặc JSON tải xuống. Bấm **Xóa khóa phiên** để xóa key và kết quả AI của phiên hiện tại. Không gửi key qua chat hoặc đưa vào Git.
+**Không cần sửa code hay tạo file `.env` để nhập key.** Nếu chưa lưu key trên máy, phiên mới bắt đầu với ô key trống. Nếu đã lưu, key được nạp từ Windows Credential Manager và vẫn hiển thị dưới dạng mật khẩu. Key không được ghi vào source, URL, prompt, log hay JSON tải xuống. **Xóa khóa phiên** chỉ xóa key/kết quả khỏi phiên hiện tại; **Xóa key đã lưu** xóa bản lưu của ứng dụng trên máy này và xóa key khỏi phiên hiện tại. Không gửi key qua chat hoặc đưa vào Git.
+
+Kho lưu này gắn với tài khoản Windows đang chạy app, không đi theo Git và không tự mang sang máy thành viên khác. Ứng dụng chạy cục bộ; không dùng cơ chế ghi nhớ này để triển khai một server dùng chung không có đăng nhập. Khi quay video, giữ ô key ở trạng thái che mật khẩu.
 
 Ứng dụng không tự đọc `.env`, `GEMINI_API_KEY` hay các biến `DBT_SQLSERVER_*`. Trong các biến môi trường cấu hình kết nối, chỉ `MSSQL_SERVER` được dùng làm giá trị mặc định cho ô SQL Server; người dùng vẫn có thể sửa trên giao diện. Khi chưa nhập key, vẫn có thể lấy DDS và đọc tab **Số liệu đối chiếu**.
 
@@ -91,6 +94,9 @@ Bấm **Kết nối và tải dữ liệu**. Kết nối dùng **Windows Authent
 4. **Hỏi AI:** nhập câu hỏi rồi bấm **Giải thích câu hỏi**, ví dụ: “Mức giao thông nào có thời gian giao trung bình cao nhất và thấp nhất? Chênh lệch đã tính là bao nhiêu?”. Nút tạo tóm tắt không gửi nội dung ô câu hỏi.
 5. **Đổi phạm vi:** xóa câu hỏi, chọn Danh mục **Grocery**, giữ các bộ lọc khác ở tất cả, rồi tạo lại tóm tắt. Nhận xét cũ bị xóa khi bộ lọc hoặc thiết lập thay đổi; API chỉ được gọi khi bấm nút.
 6. **Lưu kết quả:** mở **Thông tin kết quả và tải xuống → Tải kết quả AI (JSON)**. Model, mã phạm vi dữ liệu, template và mã dẫn chứng được giữ để kiểm tra lại. Bản số liệu tổng hợp tải riêng ở tab đối chiếu.
+7. **Thử câu ngoài phạm vi:** hỏi “Dự báo doanh thu tháng sau là bao nhiêu?” bằng nút **Giải thích câu hỏi**. Ứng dụng cần báo chưa đủ số liệu để trả lời; không biến dữ liệu giao hàng thành doanh thu dự đoán. Mở các dẫn chứng khi kiểm tra nhận xét đi kèm.
+
+Với **Số liệu đối chiếu → Theo ngày và theo nhóm → Ngày × khung giờ**, xem ma trận trung bình theo từng ngày trong tuần và khung giờ, kèm ma trận số bản ghi. Không cộng hoặc lấy trung bình các trung bình của những ô này để thay cho KPI toàn bộ dữ liệu.
 
 Trên snapshot đã kiểm tra ngày 17/11/2026: toàn bộ Fact có **43.594 bản ghi**, trung bình **124,92 phút**, P90 **195 phút**; chênh lệch Jam–Low khoảng **46,40 phút**. Grocery có **2.687 bản ghi**, trung bình **26,54 phút**, P90 **40 phút**. Đây là mốc kiểm tra của snapshot, không phải các giá trị gán cứng; chúng có thể đổi sau khi nạp dữ liệu mới.
 
@@ -151,13 +157,13 @@ $env:MSSQL_SERVER='localhost\SQLEXPRESS' # Sửa theo instance của máy.
 Remove-Item Env:\RUN_AI_DDS_TESTS
 ```
 
-Đã kiểm tra ngày 17/11/2026: **60/60 kiểm thử đạt**, gồm test giao diện và đối soát SQL chỉ đọc trong 9 phạm vi lọc; `pip check` đạt. Bản sao chỉ chứa source cũng đã tạo venv mới, cài thư viện, khởi động bằng Windows PowerShell 5.1 trên đường dẫn có dấu cách và đạt 10/10 test giao diện. Kiểm thử xác nhận key của một phiên không tự xuất hiện ở phiên khác.
+Kết quả kiểm tra ngày 21/11/2026: **79/79 kiểm thử đạt**, gồm đối soát DDS chỉ đọc trong 9 phạm vi; `pip check` đạt. Các test bao phủ tính KPI, cỡ mẫu hợp lệ, chứng cứ BLANK, biến động ngày, giới hạn số fact, gọi API giả lập, giao diện và lưu key. Test credential dùng key giả, không đọc hoặc sửa key thật của người chạy.
 
-Cập nhật ngày 21/11/2026: đã sửa trường hợp SQL Server thiếu bộ nhớ cấp cho truy vấn đọc DDS bằng cách bỏ `ORDER BY` không cần thiết. Trên máy kiểm tra, bộ nhớ mong muốn trong kế hoạch giảm từ 40.200 KB xuống 6.896 KB; đọc đủ 43.594 bản ghi mất khoảng 4,4 giây. Fingerprint của toàn bộ các trường được đọc giống bản truy vấn cũ; join, isolation, timeout và KPI được giữ nguyên. **61/61 kiểm thử đạt**, gồm regression về thứ tự dòng và đối soát SQL trong 9 phạm vi. Thời gian đọc/bộ nhớ thực tế tùy dữ liệu và máy chạy.
+Gemini thật đã chạy thành công với toàn bộ dữ liệu kèm câu hỏi Jam–Low, tóm tắt Grocery và câu hỏi doanh thu ngoài phạm vi. Phép thử hỏi đầy đủ ngày, trung bình và cỡ mẫu của mức tăng ngày lớn nhất **chưa được tính là đạt**: có lần dịch vụ lỗi tạm thời, có lần trả mã thay thế sai và bị ứng dụng chặn. Bố cục KPI, trục biểu đồ, ma trận ngày × khung giờ và việc nạp lại key đã lưu cũng đã được kiểm tra trên giao diện.
 
-Trước khi bàn giao/quay demo trên máy khác: mở app bằng source đã pull, lấy DDS, nhập key của người chạy, tạo summary, mở chứng cứ, hỏi một câu và đổi bộ lọc để tạo lại. Test dùng HTTP giả lập không thay thế bước gọi Gemini thật. Ngày 17/11/2026 đã nghiệm thu Gemini thật trên toàn bộ dữ liệu, câu hỏi Jam–Low và bộ lọc Grocery; môi trường/quota của người nhận vẫn cần kiểm tra riêng.
+Trước khi bàn giao/quay demo trên máy khác: mở app bằng source đã pull, lấy DDS, nhập key của người chạy, tạo summary, mở chứng cứ, hỏi một câu và đổi bộ lọc để tạo lại. Test dùng HTTP giả lập không thay thế bước gọi Gemini thật; môi trường/quota của người nhận cần kiểm tra riêng. Kết quả JSON có thể tải từ giao diện để đối chiếu, không cần lưu kết quả chạy thử vào source.
 
-Các file cần chia sẻ nằm gọn trong `ai/`: `app.py` (giao diện), `data.py` (đọc DDS), `analytics.py` (tính số liệu), `gemini.py` (gọi API), `grounding.py` (kiểm tra dẫn chứng), `__init__.py` (package), `requirements.txt`, `run.ps1`, hướng dẫn này và `tests/`. Giữ các test để kiểm tra khi dữ liệu hoặc code thay đổi.
+Các file cần chia sẻ nằm gọn trong `ai/`: `app.py` (giao diện), `data.py` (đọc DDS), `analytics.py` (tính số liệu), `gemini.py` (gọi API), `grounding.py` (kiểm tra dẫn chứng), `credentials.py` (adapter Windows Credential Manager, không chứa key), `__init__.py` (package), `requirements.txt`, `run.ps1`, hướng dẫn này và `tests/`. Giữ các test để kiểm tra khi dữ liệu hoặc code thay đổi.
 
 Không đưa `.ai_venv/`, `__pycache__/`, `.env`, key, log, ảnh/chứng cứ thử nghiệm hay kết quả cá nhân tải xuống vào Git. Môi trường và cache này đã có quy tắc ignore. Pull source không mang theo database hoặc key của thành viên khác.
 
@@ -169,3 +175,4 @@ Không đưa `.ai_venv/`, `__pycache__/`, `.env`, key, log, ảnh/chứng cứ t
 - [Google: danh sách model](https://ai.google.dev/api/models)
 - [Microsoft: DAX COUNT và BLANK](https://learn.microsoft.com/en-us/dax/count-function-dax)
 - [Streamlit: kiểm thử ứng dụng](https://docs.streamlit.io/develop/concepts/app-testing)
+- [Microsoft: Windows generic credential và phạm vi lưu theo tài khoản/máy](https://learn.microsoft.com/en-us/windows/win32/api/wincred/ns-wincred-credentialw)
