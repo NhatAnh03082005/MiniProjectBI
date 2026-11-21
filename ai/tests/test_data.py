@@ -57,6 +57,28 @@ class WarehouseTests(unittest.TestCase):
             cursor.close.assert_called_once()
             connection.close.assert_called_once()
 
+    def test_unordered_sql_read_preserves_the_same_rows_and_fingerprint(self):
+        connection, cursor = self.connection()
+        first_row = cursor.fetchall.return_value[0]
+        second_row = ("another-key", "another-order", *first_row[2:])
+        fingerprints = []
+        orders = []
+        for records in ([first_row, second_row], [second_row, first_row]):
+            connection, cursor = self.connection()
+            cursor.fetchall.return_value = records
+            with patch.object(data, "pyodbc") as driver:
+                driver.connect.return_value = connection
+                frame, meta = load_warehouse(DatabaseConfig())
+            fingerprints.append(meta["source_fingerprint"])
+            orders.append(frame["delivery_key"].tolist())
+            query = cursor.execute.call_args_list[1].args[0].upper()
+            self.assertNotIn("ORDER BY", query)
+            self.assertNotIn("WHERE", query)
+            self.assertEqual(query.count("LEFT JOIN"), 5)
+            self.assertEqual(set(frame["order_id"]), {"local-order", "another-order"})
+        self.assertNotEqual(orders[0], orders[1])
+        self.assertEqual(fingerprints[0], fingerprints[1])
+
     def test_missing_driver_and_invalid_config_fail_before_connection(self):
         with patch.object(data, "pyodbc", None), self.assertRaises(WarehouseError):
             load_warehouse(DatabaseConfig())
