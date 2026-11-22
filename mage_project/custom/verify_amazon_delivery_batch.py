@@ -22,14 +22,18 @@ def get_connection_string():
     )
 
 
-@custom
-def verify_amazon_delivery_batch(export_result, *args, **kwargs):
+def _verify_amazon_delivery_batch(export_result, *args, **kwargs):
     if export_result is None or len(export_result) != 1:
         raise ValueError('Exporter phải trả đúng một dòng tóm tắt batch.')
     result = export_result.iloc[0]
     load_batch_id = str(result['load_batch_id'])
 
-    with pyodbc.connect(get_connection_string()) as connection:
+    from etl_monitoring import runtime
+    if runtime.enabled():
+        verification_connection = runtime.connect()
+    else:
+        verification_connection = pyodbc.connect(get_connection_string())
+    with verification_connection as connection:
         cursor = connection.cursor()
         cursor.execute(
             """
@@ -113,3 +117,22 @@ def verify_amazon_delivery_batch(export_result, *args, **kwargs):
 def test_verification(output, *args):
     assert output is not None and len(output) == 1
     assert bool(output.iloc[0]['verified'])
+
+
+@custom
+def verify_amazon_delivery_batch(export_result, *args, **kwargs):
+    from etl_monitoring import runtime
+    value = None
+    if runtime.enabled():
+        value = str(export_result.iloc[0]['monitoring_context'])
+        runtime.start_step(runtime.context(value), 'verify', 'MAGE')
+    try:
+        output = _verify_amazon_delivery_batch(export_result, *args, **kwargs)
+        if value:
+            runtime.verified(value)
+            output['monitoring_context'] = value
+        return output
+    except Exception as error:
+        if value:
+            runtime.fail(runtime.context(value), 'verify', error)
+        raise

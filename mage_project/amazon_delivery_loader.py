@@ -12,7 +12,7 @@ import pandas as pd
 from mage_project.amazon_delivery_contract import generate_batch_name, resolve_source_path
 
 
-def load_amazon_delivery(batch_type: str, kwargs: dict[str, Any]) -> dict[str, Any]:
+def _load_amazon_delivery(batch_type: str, kwargs: dict[str, Any]) -> dict[str, Any]:
     project_root = os.environ.get('BI_PROJECT_ROOT')
     if not project_root:
         raise RuntimeError(
@@ -49,3 +49,18 @@ def load_amazon_delivery(batch_type: str, kwargs: dict[str, Any]) -> dict[str, A
         'data': source_df,
         'read_error': read_error,
     }
+
+
+def load_amazon_delivery(batch_type: str, kwargs: dict[str, Any]) -> dict[str, Any]:
+    from etl_monitoring import runtime
+    if not runtime.enabled():
+        return _load_amazon_delivery(batch_type, kwargs)
+    value = runtime.start(batch_type, kwargs)
+    try:
+        payload = _load_amazon_delivery(batch_type, kwargs)
+        payload['monitoring_context'] = value
+        runtime.source_completed(value, payload)
+        return payload
+    except Exception as error:
+        runtime.fail(runtime.context(value), 'source', error)
+        raise

@@ -507,6 +507,321 @@ cultureInfo en-US
 			          }
 			        }
 			      ]
+			    },
+			    "etl_runs.pipeline_display": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "pipeline_display"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Pipeline": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.total_etl_runs": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "Total ETL Runs"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Runs": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.latest_mage_status": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "Latest Mage Status"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Mage": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.latest_dbt_status": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "Latest dbt Status"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "dbt": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.latest_execution_status": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "Latest Execution Status"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Overall": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.run_id": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "run_id"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Run ID": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.attempt_id": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "attempt_id"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Attempt": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.overall_status": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "overall_status"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Status": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.start_time": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "start_time"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Start (UTC)": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.end_time": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "end_time"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "End (UTC)": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.execution_duration_seconds": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "Execution Duration Seconds"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Duration": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.total_inserted_rows": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "Total Inserted Rows"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Inserted": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.total_updated_rows": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "Total Updated Rows"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Updated": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.total_rejected_rows": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "Total Rejected Rows"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Rejected": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "etl_runs.total_unchanged_rows": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "ETL Runs",
+			          "ConceptualProperty": "Total Unchanged Rows"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Unchanged": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
 			    }
 			  }
 			}

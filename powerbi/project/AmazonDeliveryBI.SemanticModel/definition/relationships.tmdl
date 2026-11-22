@@ -18,3 +18,15 @@ relationship AutoDetected_83766e4e-1b96-4b9b-9018-0cdc111c9302
 	fromColumn: fact_delivery.vehicle_key
 	toColumn: dim_vehicle.vehicle_key
 
+relationship 142bf142-ad6d-45cb-a698-d609ce103cfd
+	fromColumn: 'ETL Record Metrics'.execution_key
+	toColumn: 'ETL Runs'.execution_key
+
+relationship 7a8aa2ae-87ec-4da9-a956-cbabfee139c4
+	fromColumn: 'ETL Step Status'.execution_key
+	toColumn: 'ETL Runs'.execution_key
+
+relationship ffb6cf69-5c28-476b-890c-649e5e959a97
+	fromColumn: 'ETL Error Details'.execution_key
+	toColumn: 'ETL Runs'.execution_key
+

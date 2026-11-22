@@ -1,0 +1,324 @@
+table 'ETL Runs'
+	lineageTag: 2f501c30-4e54-4fd0-9384-d69c14ce518a
+
+	measure 'Total ETL Runs' = COALESCE(COUNTROWS('ETL Runs'), 0)
+		formatString: #,0
+		displayFolder: ETL Monitoring
+		lineageTag: b9a4b253-4a0e-4eed-bd72-26612a09c1ff
+
+	measure 'Successful Runs' = COALESCE(CALCULATE([Total ETL Runs], KEEPFILTERS('ETL Runs'[overall_status] = "SUCCEEDED")), 0)
+		formatString: #,0
+		displayFolder: ETL Monitoring
+		lineageTag: 928aeac5-29fd-46ff-8e8f-ecfeb3a27c35
+
+	measure 'Failed Runs' = COALESCE(CALCULATE([Total ETL Runs], KEEPFILTERS('ETL Runs'[overall_status] = "FAILED")), 0)
+		formatString: #,0
+		displayFolder: ETL Monitoring
+		lineageTag: 4f5b9f25-108f-4b6f-8a87-8d95aa633c4e
+
+	measure 'Success Rate' = DIVIDE([Successful Runs], [Successful Runs] + [Failed Runs])
+		formatString: 0.0%
+		displayFolder: ETL Monitoring
+		lineageTag: 886deb3c-f450-47e0-a486-fe6961cecbd3
+
+	measure 'Average Execution Duration' = CALCULATE(AVERAGE('ETL Runs'[processing_duration_seconds]), KEEPFILTERS('ETL Runs'[overall_status] IN {"SUCCEEDED", "FAILED"}))
+		formatString: 0.0 "s"
+		displayFolder: ETL Monitoring
+		lineageTag: 275dd94c-0c3f-49ff-b81b-843f43a7b838
+
+	measure 'Latest Execution Timestamp' = MAX('ETL Runs'[start_time])
+		formatString: dd/MM/yyyy HH:mm:ss
+		displayFolder: ETL Monitoring
+		lineageTag: 1ef4fa50-3b31-4b2b-b5b4-2298756e0794
+
+	measure 'Latest Execution Status' = VAR LatestRun = TOPN(1, 'ETL Runs', 'ETL Runs'[start_time], DESC, 'ETL Runs'[execution_key], DESC) RETURN IF(ISEMPTY(LatestRun), "NO EXECUTIONS", CONCATENATEX(LatestRun, 'ETL Runs'[overall_status], ""))
+		displayFolder: ETL Monitoring
+		lineageTag: 8a556f81-721b-495e-94bb-f06a389a0b8c
+
+	measure 'Latest Execution Label' = FORMAT([Latest Execution Timestamp], "dd/MM/yyyy HH:mm:ss")
+		displayFolder: ETL Monitoring
+		lineageTag: bcb1144c-944e-413f-a3ac-39eea1434c1b
+
+	measure 'Execution Duration Seconds' = SELECTEDVALUE('ETL Runs'[processing_duration_seconds])
+		formatString: 0.0 "s"
+		displayFolder: ETL Monitoring
+		lineageTag: 8694c5b9-0a22-4fe2-9357-977b78c41d18
+
+	measure 'Latest Mage Status' = VAR LatestRun = TOPN(1, 'ETL Runs', 'ETL Runs'[start_time], DESC, 'ETL Runs'[execution_key], DESC) RETURN CONCATENATEX(LatestRun, 'ETL Runs'[mage_status], "")
+		displayFolder: ETL Monitoring
+		lineageTag: 56a1e34d-575b-4924-8e21-eb4c139edf19
+
+	measure 'Latest dbt Status' = VAR LatestRun = TOPN(1, 'ETL Runs', 'ETL Runs'[start_time], DESC, 'ETL Runs'[execution_key], DESC) RETURN CONCATENATEX(LatestRun, 'ETL Runs'[dbt_status], "")
+		displayFolder: ETL Monitoring
+		lineageTag: 685f7e08-9f2d-489f-a151-75482314b849
+
+	measure 'Total Inserted Rows' = CALCULATE(SUM('ETL Record Metrics'[records_inserted]), KEEPFILTERS('ETL Record Metrics'[is_chart_eligible] = TRUE()))
+		formatString: #,0
+		displayFolder: ETL Monitoring
+		lineageTag: 569f398a-57a8-439e-ad24-9ba8c08cc94e
+
+	measure 'Total Updated Rows' = CALCULATE(SUM('ETL Record Metrics'[records_updated]), KEEPFILTERS('ETL Record Metrics'[is_chart_eligible] = TRUE()))
+		formatString: #,0
+		displayFolder: ETL Monitoring
+		lineageTag: 5a8aa3a4-fbd5-42f8-b740-28ae3a9144c0
+
+	measure 'Total Rejected Rows' = CALCULATE(SUM('ETL Record Metrics'[records_rejected]), KEEPFILTERS('ETL Record Metrics'[is_chart_eligible] = TRUE()))
+		formatString: #,0
+		displayFolder: ETL Monitoring
+		lineageTag: 98b4f4cf-47bc-4a56-82d3-93219428ccd0
+
+	measure 'Total Unchanged Rows' = CALCULATE(SUM('ETL Record Metrics'[records_unchanged]), KEEPFILTERS('ETL Record Metrics'[is_chart_eligible] = TRUE()))
+		formatString: #,0
+		displayFolder: ETL Monitoring
+		lineageTag: d1978a61-7283-4cab-b2ec-8fdf7d760f9f
+
+	column execution_key
+		dataType: string
+		isHidden
+		lineageTag: 97e7f9b0-ff21-48da-b88e-4dfd338d08a2
+		summarizeBy: none
+		sourceColumn: execution_key
+
+	column run_id
+		dataType: string
+		lineageTag: 75334571-40bd-421e-ad8d-d71b9b2c526b
+		summarizeBy: none
+		sourceColumn: run_id
+
+	column attempt_id
+		dataType: int64
+		lineageTag: 2f8c3c2f-1277-47fc-8066-3a31087a8c74
+		summarizeBy: none
+		sourceColumn: attempt_id
+
+	column pipeline_name
+		dataType: string
+		lineageTag: 50466eb2-b169-405a-aeb9-d13c49e89092
+		summarizeBy: none
+		sourceColumn: pipeline_name
+
+	column batch_type
+		dataType: string
+		lineageTag: b9b6e303-1bb4-4d1e-b054-b0622130e324
+		summarizeBy: none
+		sourceColumn: batch_type
+
+	column execution_kind
+		dataType: string
+		lineageTag: a21f883e-c205-4918-b12c-1fe560147075
+		summarizeBy: none
+		sourceColumn: execution_kind
+
+	column source_file
+		dataType: string
+		lineageTag: ae87fa49-5f01-4432-8fb9-c1fc33b1f63e
+		summarizeBy: none
+		sourceColumn: source_file
+
+	column source_checksum
+		dataType: string
+		isHidden
+		lineageTag: 9333ed52-a880-407a-b757-7e7c2aaa884e
+		summarizeBy: none
+		sourceColumn: source_checksum
+
+	column legacy_load_batch_id
+		dataType: string
+		isHidden
+		lineageTag: 20c96196-a86f-43eb-8e81-581660a1fbe4
+		summarizeBy: none
+		sourceColumn: legacy_load_batch_id
+
+	column mage_pipeline_run_id
+		dataType: string
+		lineageTag: b434ad43-1b45-4273-92ed-7022bf328a34
+		summarizeBy: none
+		sourceColumn: mage_pipeline_run_id
+
+	column evidence_kind
+		dataType: string
+		lineageTag: 8a09a21b-5d61-43e3-abb4-4895b54cce62
+		summarizeBy: none
+		sourceColumn: evidence_kind
+
+	column status
+		dataType: string
+		lineageTag: d97afbdc-6890-40dd-a3cf-864e90cd53e4
+		summarizeBy: none
+		sourceColumn: status
+
+	column start_time
+		dataType: dateTime
+		formatString: dd/MM HH:mm:ss
+		lineageTag: 8426ebab-d759-4950-901a-9364d2181073
+		summarizeBy: none
+		sourceColumn: start_time
+
+	column end_time
+		dataType: dateTime
+		formatString: dd/MM HH:mm:ss
+		lineageTag: a337baa7-100d-44b9-8b4d-a28b1117d0da
+		summarizeBy: none
+		sourceColumn: end_time
+
+	column heartbeat_at
+		dataType: dateTime
+		formatString: dd/MM HH:mm:ss
+		lineageTag: d59318e0-9054-443e-aab7-8959db719aca
+		summarizeBy: none
+		sourceColumn: heartbeat_at
+
+	column metric_definition_version
+		dataType: string
+		isHidden
+		lineageTag: 999bf2d1-58c2-473a-ad5e-5e9ff3fe91e3
+		summarizeBy: none
+		sourceColumn: metric_definition_version
+
+	column overall_status
+		dataType: string
+		lineageTag: cbbf0339-a4df-4ebd-aed1-79358e5ed2b7
+		summarizeBy: none
+		sourceColumn: overall_status
+
+	column execution_origin
+		dataType: string
+		lineageTag: 0425ff48-b5d9-4b8b-b7bb-d97b4668a392
+		summarizeBy: none
+		sourceColumn: execution_origin
+
+	column duration_seconds
+		dataType: double
+		lineageTag: 309e4be6-c279-4057-8d80-ca607cfd7b45
+		summarizeBy: none
+		sourceColumn: duration_seconds
+
+	column duration_scope
+		dataType: string
+		lineageTag: f5afb5d6-c308-461a-9eca-1417e817774a
+		summarizeBy: none
+		sourceColumn: duration_scope
+
+	column source_status
+		dataType: string
+		lineageTag: 2d578d06-d2dd-45b2-8640-82ffad4cc989
+		summarizeBy: none
+		sourceColumn: source_status
+
+	column mage_status
+		dataType: string
+		lineageTag: 0f6b0cbf-fb9f-47a3-b618-0e5ba968285a
+		summarizeBy: none
+		sourceColumn: mage_status
+
+	column dbt_status
+		dataType: string
+		lineageTag: de88f479-dcea-42d1-81b9-d170ac84a579
+		summarizeBy: none
+		sourceColumn: dbt_status
+
+	column warehouse_status
+		dataType: string
+		lineageTag: 680f0773-26aa-4069-a01c-9957eb02898c
+		summarizeBy: none
+		sourceColumn: warehouse_status
+
+	column mage_start_time
+		dataType: dateTime
+		formatString: dd/MM HH:mm:ss
+		lineageTag: d59c7dbf-4fe4-47bc-8f31-0600a5ed7f7a
+		summarizeBy: none
+		sourceColumn: mage_start_time
+
+	column mage_end_time
+		dataType: dateTime
+		formatString: dd/MM HH:mm:ss
+		lineageTag: 468cc876-240b-4426-8752-a44e8dbcae2b
+		summarizeBy: none
+		sourceColumn: mage_end_time
+
+	column dbt_start_time
+		dataType: dateTime
+		formatString: dd/MM HH:mm:ss
+		lineageTag: 98908a94-9b3c-4de6-a835-9334cfdce6a4
+		summarizeBy: none
+		sourceColumn: dbt_start_time
+
+	column dbt_end_time
+		dataType: dateTime
+		formatString: dd/MM HH:mm:ss
+		lineageTag: f85af837-7cbf-4fa3-b62f-f59aaeb7c365
+		summarizeBy: none
+		sourceColumn: dbt_end_time
+
+	column mage_duration_seconds
+		dataType: double
+		lineageTag: ce2866f9-f590-4f96-8145-46a4ace07865
+		summarizeBy: none
+		sourceColumn: mage_duration_seconds
+
+	column dbt_duration_seconds
+		dataType: double
+		lineageTag: b0fa41f4-c72b-42a1-9d43-4425c7e00e6e
+		summarizeBy: none
+		sourceColumn: dbt_duration_seconds
+
+	column processing_duration_seconds
+		dataType: double
+		lineageTag: 63fde4f8-77be-49b5-a10f-ff6568a978ce
+		summarizeBy: none
+		sourceColumn: processing_duration_seconds
+
+	column failed_step
+		dataType: string
+		lineageTag: bcd998fa-a214-4a1f-856b-f02709f5748a
+		summarizeBy: none
+		sourceColumn: failed_step
+
+	column failed_step_attempt
+		dataType: int64
+		lineageTag: 9be0c7ee-e7c5-4a88-8018-d88e4e6ac73f
+		summarizeBy: none
+		sourceColumn: failed_step_attempt
+
+	column error_message
+		dataType: string
+		lineageTag: eb04c5a5-5d89-4db8-a3e9-165b44f99f76
+		summarizeBy: none
+		sourceColumn: error_message
+
+	column warning_message
+		dataType: string
+		lineageTag: 19bbfa1d-c7a8-4fef-88bd-a9c144d0be0c
+		summarizeBy: none
+		sourceColumn: warning_message
+
+	column start_date
+		dataType: dateTime
+		formatString: dd/MM/yyyy
+		lineageTag: c67e3a19-6836-4993-8fa5-a7c11bd8631e
+		summarizeBy: none
+		sourceColumn: start_date
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column pipeline_display
+		dataType: string
+		lineageTag: 0230d6d3-2845-491b-b83b-7474cdd1089f
+		summarizeBy: none
+		sourceColumn: pipeline_display
+
+	partition 'ETL Runs' = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database("localhost\SQLEXPRESS", "AmazonDeliveryBI", [CreateNavigationProperties=false]),
+				    Identity = Value.NativeQuery(Source, "SELECT DB_NAME() AS db_name, CONVERT(nvarchar(128), SERVERPROPERTY('ServerName')) AS server_name"),
+				    Guarded = if Identity{0}[db_name] = "AmazonDeliveryBI" and Text.Upper(Identity{0}[server_name]) = "DESKTOP-OBDFK6B\SQLEXPRESS" then Source else error "ETL Monitoring requires the approved SQL Server PRIMARY target",
+				    View = Guarded{[Schema="monitoring", Item="vw_etl_run_summary"]}[Data],
+				    WithDate = Table.AddColumn(View, "start_date", each Date.From([start_time]), type date),
+				    WithPipeline = Table.AddColumn(WithDate, "pipeline_display", each if [pipeline_name] = "amazon_delivery_full_load" then "FULL LOAD" else if [pipeline_name] = "amazon_delivery_incremental_load" then "INCREMENTAL" else [pipeline_name], type text)
+				in
+				    WithPipeline
+
+	annotation PBI_ResultType = Table
