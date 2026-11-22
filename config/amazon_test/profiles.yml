@@ -1,0 +1,13 @@
+amazon_delivery_bi:
+  target: test
+  outputs:
+    test:
+      type: sqlserver
+      driver: ODBC Driver 18 for SQL Server
+      server: localhost\SQLEXPRESS
+      database: AmazonDeliveryBI_TEST
+      schema: dw
+      windows_login: true
+      encrypt: true
+      trust_cert: true
+      threads: 1

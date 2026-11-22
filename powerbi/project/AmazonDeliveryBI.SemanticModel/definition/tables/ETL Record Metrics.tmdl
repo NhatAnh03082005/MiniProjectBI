@@ -1,0 +1,144 @@
+table 'ETL Record Metrics'
+	lineageTag: 31dde2c6-6a39-4a68-8f6f-e0592bed3568
+
+	column execution_key
+		dataType: string
+		isHidden
+		lineageTag: c76adfc6-85b0-49c7-b096-57b873f1c954
+		summarizeBy: none
+		sourceColumn: execution_key
+
+	column step_key
+		dataType: string
+		lineageTag: a502e50e-c556-4171-85ad-cdbfaefc08d3
+		summarizeBy: none
+		sourceColumn: step_key
+
+	column step_attempt
+		dataType: int64
+		lineageTag: 5dd79fd8-0c19-4ac6-a32b-2cb60defa66c
+		summarizeBy: none
+		sourceColumn: step_attempt
+
+	column metric_scope
+		dataType: string
+		lineageTag: 57174b2b-ec3b-4eff-a0e7-c128fe68b0fa
+		summarizeBy: none
+		sourceColumn: metric_scope
+
+	column entity_name
+		dataType: string
+		lineageTag: 31d78d4f-023a-403e-8de5-9d2a181c9ecf
+		summarizeBy: none
+		sourceColumn: entity_name
+
+	column measurement_state
+		dataType: string
+		lineageTag: aaa086e0-f0bc-405f-92d6-5b7c8b4348fa
+		summarizeBy: none
+		sourceColumn: measurement_state
+
+	column records_read
+		dataType: int64
+		lineageTag: 19857198-3a15-4da8-9e6c-550037ebdead
+		summarizeBy: none
+		sourceColumn: records_read
+
+	column records_valid
+		dataType: int64
+		lineageTag: bcd6601f-7cb2-4209-9c05-4a7e0b6cfad3
+		summarizeBy: none
+		sourceColumn: records_valid
+
+	column records_inserted
+		dataType: int64
+		lineageTag: b0eb441b-dc41-47cc-95d9-47f748438cc9
+		summarizeBy: none
+		sourceColumn: records_inserted
+
+	column records_updated
+		dataType: int64
+		lineageTag: e1f1897e-7c63-430d-ab42-e954cbc27efb
+		summarizeBy: none
+		sourceColumn: records_updated
+
+	column records_unchanged
+		dataType: int64
+		lineageTag: 0e99d55e-a4e4-4517-a91e-655f2fd08c22
+		summarizeBy: none
+		sourceColumn: records_unchanged
+
+	column records_rejected
+		dataType: int64
+		lineageTag: 18166f8a-9a36-4727-980d-53ad6d34fb8f
+		summarizeBy: none
+		sourceColumn: records_rejected
+
+	column records_written
+		dataType: int64
+		lineageTag: 99d1a723-086f-4e15-99ec-e770e526164f
+		summarizeBy: none
+		sourceColumn: records_written
+
+	column captured_at
+		dataType: dateTime
+		formatString: dd/MM HH:mm:ss
+		lineageTag: 1ea69984-5a8a-40d0-a461-f1e7c6fdeb4f
+		summarizeBy: none
+		sourceColumn: captured_at
+
+	column run_id
+		dataType: string
+		lineageTag: e74baaa2-5146-488f-8e24-a77fdf8f2cde
+		summarizeBy: none
+		sourceColumn: run_id
+
+	column attempt_id
+		dataType: int64
+		lineageTag: d7616088-8394-46d2-b799-567d7c4a1e88
+		summarizeBy: none
+		sourceColumn: attempt_id
+
+	column batch_type
+		dataType: string
+		lineageTag: 43f9d81f-d78b-42ac-897c-f036a7ac3fac
+		summarizeBy: none
+		sourceColumn: batch_type
+
+	column metric_definition_version
+		dataType: string
+		isHidden
+		lineageTag: f78fb9cd-8752-4660-b2ff-9575c8f4e0c8
+		summarizeBy: none
+		sourceColumn: metric_definition_version
+
+	column latest_attempt_rank
+		dataType: int64
+		lineageTag: 1a9eb809-b6ea-48e0-87d0-5197d519061a
+		summarizeBy: none
+		sourceColumn: latest_attempt_rank
+
+	column step_status
+		dataType: string
+		lineageTag: 36018147-ed9f-48bb-b4bd-7449ff4203e1
+		summarizeBy: none
+		sourceColumn: step_status
+
+	column is_chart_eligible
+		dataType: boolean
+		lineageTag: 664c2389-5ebd-4c9a-800f-6f42adcd76c2
+		summarizeBy: none
+		sourceColumn: is_chart_eligible
+
+	partition 'ETL Record Metrics' = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database(#"ETL Monitoring Server", #"ETL Monitoring Database", [CreateNavigationProperties=false]),
+				    Identity = Value.NativeQuery(Source, "SELECT DB_NAME() AS db_name, CONVERT(nvarchar(128), SERVERPROPERTY('ServerName')) AS server_name, (SELECT CONVERT(nvarchar(128),value) FROM sys.extended_properties WHERE class=0 AND name='ETLMonitoring.Environment') AS environment"),
+				    Guarded = if Identity{0}[db_name] = "AmazonDeliveryBI_Demo" and Identity{0}[environment] = "APPROVED_DEMO" then Source else error "ETL Monitoring requires the configured DEMO target and APPROVED_DEMO marker",
+				    View = Guarded{[Schema="monitoring", Item="vw_etl_record_metrics"]}[Data]
+				in
+				    View
+
+	annotation PBI_ResultType = Table

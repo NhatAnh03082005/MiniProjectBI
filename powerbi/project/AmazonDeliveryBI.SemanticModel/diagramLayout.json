@@ -11,7 +11,7 @@
         {
           "location": {
             "x": 634.36568539704376,
-            "y": 183.52375959586567
+            "y": 300.28563939379848
           },
           "nodeIndex": "dim_area",
           "size": {
@@ -23,7 +23,7 @@
         {
           "location": {
             "x": 165.436475976177,
-            "y": 186.65221432884096
+            "y": 303.41409412677376
           },
           "nodeIndex": "dim_category",
           "size": {
@@ -35,7 +35,7 @@
         {
           "location": {
             "x": 728.98595285449119,
-            "y": 612.3650627224315
+            "y": 729.12694252036431
           },
           "nodeIndex": "dim_date",
           "size": {
@@ -47,7 +47,7 @@
         {
           "location": {
             "x": 310.89812142386074,
-            "y": 804.52496727086179
+            "y": 921.2868470687946
           },
           "nodeIndex": "dim_delivery_condition",
           "size": {
@@ -59,7 +59,7 @@
         {
           "location": {
             "x": 0,
-            "y": 637.630909758468
+            "y": 754.39278955640077
           },
           "nodeIndex": "dim_vehicle",
           "size": {
@@ -71,7 +71,7 @@
         {
           "location": {
             "x": 339.42211773670664,
-            "y": 375.59457134915351
+            "y": 492.35645114708632
           },
           "nodeIndex": "fact_delivery",
           "nodeLineageTag": "b89ae036-337b-43fb-8776-4a1975405caa",
@@ -84,7 +84,7 @@
         {
           "location": {
             "x": 1569.2676862626861,
-            "y": 349.29841428900306
+            "y": 466.06029408693587
           },
           "nodeIndex": "_Measures",
           "nodeLineageTag": "e17a1649-1210-4383-906a-372772d01c4d",
@@ -93,6 +93,58 @@
             "width": 234
           },
           "zIndex": 7
+        },
+        {
+          "location": {
+            "x": 2475.8985709823364,
+            "y": 652.49428558787429
+          },
+          "nodeIndex": "ETL Error Details",
+          "nodeLineageTag": "214a05a4-d77d-464f-b97a-09d29a269708",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 2309.0323360855496,
+            "y": -45.969318317012721
+          },
+          "nodeIndex": "ETL Record Metrics",
+          "nodeLineageTag": "31dde2c6-6a39-4a68-8f6f-e0592bed3568",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 2188.9213729996864,
+            "y": 307.73576069996932
+          },
+          "nodeIndex": "ETL Runs",
+          "nodeLineageTag": "2f501c30-4e54-4fd0-9384-d69c14ce518a",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1903.2676862626861,
+            "y": 110.66073436613135
+          },
+          "nodeIndex": "ETL Step Status",
+          "nodeLineageTag": "d6d9b3bf-37f3-40d0-81f6-2fb931fbeecd",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
         }
       ],
       "name": "All tables",

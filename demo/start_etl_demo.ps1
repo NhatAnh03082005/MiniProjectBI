@@ -5,7 +5,8 @@ param(
     [string]$Driver = 'ODBC Driver 18 for SQL Server',
     [ValidateSet('sql', 'windows')]
     [string]$Authentication = 'sql',
-    [string]$User = 'sa'
+    [string]$User = 'sa',
+    [switch]$Monitoring
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,6 +16,10 @@ $magePath = Join-Path $projectRoot '.venv/Scripts/mage.exe'
 if (!(Test-Path -LiteralPath $pythonPath) -or !(Test-Path -LiteralPath $magePath)) {
     throw 'Can moi truong .venv co Mage. Xem MAGE_TEAM_SETUP.md.'
 }
+if ($env:AMAZON_TEST_CONNECTIONS -eq '1') { throw 'Use a fresh shell; isolated TEST guard is active.' }
+if ($Monitoring -and $Database -ne 'AmazonDeliveryBI_Demo') { throw 'Monitoring integration is DEMO-only for this handover.' }
+$env:AMAZON_MONITORING_ENABLED = $(if ($Monitoring) { '1' } else { '0' })
+if ($Monitoring) { $env:ETL_MONITORING_ENV = 'DEMO' }
 $env:BI_PROJECT_ROOT = $projectRoot
 $env:MSSQL_SERVER = $Server
 $env:MSSQL_DATABASE = $Database

@@ -1,0 +1,103 @@
+table 'ETL Error Details'
+	lineageTag: 214a05a4-d77d-464f-b97a-09d29a269708
+
+	column error_id
+		dataType: int64
+		lineageTag: c1393752-102b-4d0e-bd8b-89bc97b6988f
+		summarizeBy: none
+		sourceColumn: error_id
+
+	column execution_key
+		dataType: string
+		isHidden
+		lineageTag: d8b66a9b-af81-4832-a927-f15be62631e4
+		summarizeBy: none
+		sourceColumn: execution_key
+
+	column step_key
+		dataType: string
+		lineageTag: 3a40766b-8030-43ce-b7ca-e69e7825e95d
+		summarizeBy: none
+		sourceColumn: step_key
+
+	column step_attempt
+		dataType: int64
+		lineageTag: 1078d4f1-ff04-4c7e-9cc8-9b5dc95a0f06
+		summarizeBy: none
+		sourceColumn: step_attempt
+
+	column severity
+		dataType: string
+		lineageTag: e61b6e29-ef96-4cbe-9d04-9839e4baa655
+		summarizeBy: none
+		sourceColumn: severity
+
+	column error_code
+		dataType: string
+		lineageTag: 61736023-a4c4-43a7-a03f-2fc35ef6eb03
+		summarizeBy: none
+		sourceColumn: error_code
+
+	column message
+		dataType: string
+		lineageTag: 5ec6b050-4344-4cae-8b5c-065c87d50f07
+		summarizeBy: none
+		sourceColumn: message
+
+	column occurred_at
+		dataType: dateTime
+		formatString: dd/MM HH:mm:ss
+		lineageTag: 963d42a7-e7a4-4dc1-98bb-2c4bcf5ab0e8
+		summarizeBy: none
+		sourceColumn: occurred_at
+
+	column run_id
+		dataType: string
+		lineageTag: 088de66c-c3c5-453b-8b93-97ab8de11556
+		summarizeBy: none
+		sourceColumn: run_id
+
+	column attempt_id
+		dataType: int64
+		lineageTag: 88a4071c-1313-47a5-90e7-1059acd6990c
+		summarizeBy: none
+		sourceColumn: attempt_id
+
+	column step_attempt_status
+		dataType: string
+		lineageTag: 1e3d7a77-4a7c-401c-998c-22ab53b5d4dd
+		summarizeBy: none
+		sourceColumn: step_attempt_status
+
+	column latest_attempt_rank
+		dataType: int64
+		lineageTag: 9317c624-03d5-4c7a-876c-eb330e4a491b
+		summarizeBy: none
+		sourceColumn: latest_attempt_rank
+
+	column is_current_step_failure
+		dataType: boolean
+		lineageTag: cf02b97b-e52d-4e0f-a603-28e3e5a52c9a
+		summarizeBy: none
+		sourceColumn: is_current_step_failure
+
+	column event_key
+		dataType: string
+		lineageTag: 1a49ba6f-aa94-45e1-a97a-2b4cd493febe
+		summarizeBy: none
+		sourceColumn: event_key
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'ETL Error Details' = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database(#"ETL Monitoring Server", #"ETL Monitoring Database", [CreateNavigationProperties=false]),
+				    Identity = Value.NativeQuery(Source, "SELECT DB_NAME() AS db_name, CONVERT(nvarchar(128), SERVERPROPERTY('ServerName')) AS server_name, (SELECT CONVERT(nvarchar(128),value) FROM sys.extended_properties WHERE class=0 AND name='ETLMonitoring.Environment') AS environment"),
+				    Guarded = if Identity{0}[db_name] = "AmazonDeliveryBI_Demo" and Identity{0}[environment] = "APPROVED_DEMO" then Source else error "ETL Monitoring requires the configured DEMO target and APPROVED_DEMO marker",
+				    View = Guarded{[Schema="monitoring", Item="vw_etl_error_details"]}[Data]
+				in
+				    View
+
+	annotation PBI_ResultType = Table

@@ -9,7 +9,7 @@ model Model
 
 annotation __PBI_TimeIntelligenceEnabled = 0
 
-annotation PBI_QueryOrder = ["dim_area","dim_category","dim_date","dim_delivery_condition","dim_vehicle","fact_delivery"]
+annotation PBI_QueryOrder = ["dim_area","dim_category","dim_date","dim_delivery_condition","dim_vehicle","fact_delivery","ETL Runs","ETL Record Metrics","ETL Step Status","ETL Error Details"]
 
 annotation PBI_ProTooling = ["DevMode"]
 
@@ -20,6 +20,13 @@ ref table dim_delivery_condition
 ref table dim_vehicle
 ref table fact_delivery
 ref table _Measures
+ref table 'ETL Runs'
+ref table 'ETL Record Metrics'
+ref table 'ETL Step Status'
+ref table 'ETL Error Details'
 
 ref cultureInfo en-US
 
+
+ref expression 'ETL Monitoring Server'
+ref expression 'ETL Monitoring Database'

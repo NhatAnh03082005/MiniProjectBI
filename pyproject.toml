@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amazon-delivery-etl-monitoring"
+version = "1.0.0"
+description = "Amazon Delivery Mage ingestion and SQL Server ETL monitoring"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "pandas==2.3.3",
+    "pyodbc==5.3.0",
+    "PyYAML==6.0.3",
+]
+
+[project.optional-dependencies]
+mage = ["mage-ai==0.9.80"]
+
+[tool.setuptools.packages.find]
+include = ["etl_monitoring*", "mage_project*"]
+exclude = ["*.tests*"]

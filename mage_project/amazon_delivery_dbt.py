@@ -83,7 +83,7 @@ def _read_results(path: Path) -> dict:
     }
 
 
-def run_dbt_after_verification(verified: pd.DataFrame) -> pd.DataFrame:
+def _run_dbt_after_verification(verified: pd.DataFrame, monitor=None) -> pd.DataFrame:
     if verified is None or len(verified) != 1:
         raise ValueError('Cần đúng một kết quả Verify trước khi chạy dbt.')
     row = verified.iloc[0]
@@ -149,12 +149,17 @@ def run_dbt_after_verification(verified: pd.DataFrame) -> pd.DataFrame:
                 # Do not inherit a user's warning-to-error policy: the project's
                 # intentional rejection WARN must remain a WARN for this pipeline.
                 env.pop('DBT_WARN_ERROR_OPTIONS', None)
+                ticket = monitor.prepare(work) if monitor else None
+                target_dir = Path(ticket['target_path']) if ticket else work / 'target'
+                dbt_log_dir = Path(ticket['log_path']) if ticket else work / 'dbt_logs'
                 command = [str(_dbt_python(root)), '-m', 'dbt.cli.main',
                            '--no-use-colors', '--no-partial-parse',
-                           '--log-path', str(work / 'dbt_logs'),
+                           '--log-path', str(dbt_log_dir),
                            'build', '--project-dir', str(root / 'dbt_project'),
                            '--profiles-dir', str(profile_dir), '--target', 'mage',
-                           '--target-path', str(work / 'target')]
+                           '--target-path', str(target_dir)]
+                if ticket:
+                    command += ['--vars', ticket['vars_json']]
                 timeout = int(os.environ.get('DBT_BUILD_TIMEOUT_SECONDS', '1800'))
                 if timeout <= 0:
                     raise ValueError('DBT_BUILD_TIMEOUT_SECONDS phải lớn hơn 0.')
@@ -165,13 +170,16 @@ def run_dbt_after_verification(verified: pd.DataFrame) -> pd.DataFrame:
                                              timeout=timeout, check=False)
                 exit_code = process.returncode
                 summary['exit_code'] = exit_code
+                summary['dbt_target_directory'] = str(target_dir)
+                if monitor:
+                    monitor.record_dbt(exit_code)
                 # Artifacts live in a unique attempt directory: never read an old run.
                 if exit_code != 0:
                     # A failing build can still have useful test counts.
-                    if (work / 'target/run_results.json').is_file():
-                        summary.update(_read_results(work / 'target/run_results.json'))
+                    if (target_dir / 'run_results.json').is_file():
+                        summary.update(_read_results(target_dir / 'run_results.json'))
                     raise RuntimeError(f'dbt build exit_code={exit_code}; xem {work / "dbt_stdout.log"}')
-                summary.update(_read_results(work / 'target/run_results.json'))
+                summary.update(_read_results(target_dir / 'run_results.json'))
                 if summary['nodes_failed']:
                     raise RuntimeError('dbt artifact có node thất bại dù exit code bằng 0.')
                 cursor.execute('''
@@ -220,6 +228,8 @@ def run_dbt_after_verification(verified: pd.DataFrame) -> pd.DataFrame:
             })
             _write_json(work / 'summary.json', summary)
         raise
+    if monitor:
+        monitor.finish()
     result = verified.copy()
     result['ingestion_status'] = 'SUCCEEDED'
     result['dbt_status'] = 'SUCCEEDED'
@@ -231,3 +241,15 @@ def run_dbt_after_verification(verified: pd.DataFrame) -> pd.DataFrame:
         result[field] = summary[field]
     print(f'ETL SUCCEEDED: batch={batch_id}; fact={summary["fact_rows"]}; log={work}')
     return result
+
+
+def run_dbt_after_verification(verified: pd.DataFrame) -> pd.DataFrame:
+    from etl_monitoring import runtime
+    from etl_monitoring.pipeline_bridge import DbtSession
+    monitor = DbtSession(verified) if runtime.enabled() else None
+    try:
+        return _run_dbt_after_verification(verified, monitor)
+    except BaseException as error:
+        if monitor:
+            monitor.fail(error)
+        raise

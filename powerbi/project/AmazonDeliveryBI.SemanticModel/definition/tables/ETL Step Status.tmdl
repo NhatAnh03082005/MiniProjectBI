@@ -1,0 +1,151 @@
+table 'ETL Step Status'
+	lineageTag: d6d9b3bf-37f3-40d0-81f6-2fb931fbeecd
+
+	column execution_key
+		dataType: string
+		isHidden
+		lineageTag: c0f4b3f1-1a2b-4d17-bf27-50a5139ccea8
+		summarizeBy: none
+		sourceColumn: execution_key
+
+	column step_key
+		dataType: string
+		lineageTag: b8bdee97-6bb0-4a61-ae04-5cc33eedc365
+		summarizeBy: none
+		sourceColumn: step_key
+
+	column step_attempt
+		dataType: int64
+		lineageTag: 48d58b19-4e12-4a0b-a859-69113550c8e1
+		summarizeBy: none
+		sourceColumn: step_attempt
+
+	column component
+		dataType: string
+		lineageTag: 63351298-f2ca-46e7-aa04-1e566a7c6995
+		summarizeBy: none
+		sourceColumn: component
+
+	column external_execution_id
+		dataType: string
+		lineageTag: 02b89344-bea3-4306-bc45-500bb5039ad3
+		summarizeBy: none
+		sourceColumn: external_execution_id
+
+	column dbt_invocation_id
+		dataType: string
+		lineageTag: 2f0419d5-a9c0-433f-bb43-47f62172efea
+		summarizeBy: none
+		sourceColumn: dbt_invocation_id
+
+	column native_status
+		dataType: string
+		lineageTag: 1469ed79-02c7-4d06-a89d-6c9d50131d99
+		summarizeBy: none
+		sourceColumn: native_status
+
+	column resource_type
+		dataType: string
+		lineageTag: 018525fa-b3a1-42c9-b992-dcab40b420fc
+		summarizeBy: none
+		sourceColumn: resource_type
+
+	column artifact_sha256
+		dataType: string
+		isHidden
+		lineageTag: a9717954-6bae-4325-b44a-54d7a8628110
+		summarizeBy: none
+		sourceColumn: artifact_sha256
+
+	column dbt_command
+		dataType: string
+		lineageTag: 6bc187ea-9799-4be4-9b47-1d8e07cf28da
+		summarizeBy: none
+		sourceColumn: dbt_command
+
+	column process_exit_code
+		dataType: int64
+		lineageTag: 8798c09c-7041-4346-b8e9-bee4f8a50ee1
+		summarizeBy: none
+		sourceColumn: process_exit_code
+
+	column artifact_verified
+		dataType: boolean
+		lineageTag: b8ab3504-0c71-446b-9f7d-f31e93762676
+		summarizeBy: none
+		sourceColumn: artifact_verified
+
+	column artifact_path
+		dataType: string
+		lineageTag: 64c5be36-baa6-4823-bfe0-ea1a4298933e
+		summarizeBy: none
+		sourceColumn: artifact_path
+
+	column status
+		dataType: string
+		lineageTag: c9122059-e398-40c4-b9bb-cb46de6f3a75
+		summarizeBy: none
+		sourceColumn: status
+
+	column start_time
+		dataType: dateTime
+		formatString: dd/MM HH:mm:ss
+		lineageTag: 9eb9c49e-094d-4cca-9803-694460b922c2
+		summarizeBy: none
+		sourceColumn: start_time
+
+	column end_time
+		dataType: dateTime
+		formatString: dd/MM HH:mm:ss
+		lineageTag: 9a819545-9b42-4d7f-9ef1-5b99b9030181
+		summarizeBy: none
+		sourceColumn: end_time
+
+	column native_duration_seconds
+		dataType: double
+		lineageTag: 666879c7-5c8b-4357-8ecb-85a5a676467c
+		summarizeBy: none
+		sourceColumn: native_duration_seconds
+
+	column native_failures
+		dataType: int64
+		lineageTag: 6011983b-399c-4ad6-b01b-36532af7ba7f
+		summarizeBy: none
+		sourceColumn: native_failures
+
+	column run_id
+		dataType: string
+		lineageTag: f8735a24-d461-48dd-80e3-d0876bf7da88
+		summarizeBy: none
+		sourceColumn: run_id
+
+	column attempt_id
+		dataType: int64
+		lineageTag: 25ec6993-a7e0-4195-887d-0d2d31f391ce
+		summarizeBy: none
+		sourceColumn: attempt_id
+
+	column duration_seconds
+		dataType: double
+		lineageTag: e27fffe8-3c1c-4057-b2a7-262827b7e3b7
+		summarizeBy: none
+		sourceColumn: duration_seconds
+
+	column latest_attempt_rank
+		dataType: int64
+		lineageTag: 8d54d657-5e3c-42cb-ad4a-73f7102cbb92
+		summarizeBy: none
+		sourceColumn: latest_attempt_rank
+
+	partition 'ETL Step Status' = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database(#"ETL Monitoring Server", #"ETL Monitoring Database", [CreateNavigationProperties=false]),
+				    Identity = Value.NativeQuery(Source, "SELECT DB_NAME() AS db_name, CONVERT(nvarchar(128), SERVERPROPERTY('ServerName')) AS server_name, (SELECT CONVERT(nvarchar(128),value) FROM sys.extended_properties WHERE class=0 AND name='ETLMonitoring.Environment') AS environment"),
+				    Guarded = if Identity{0}[db_name] = "AmazonDeliveryBI_Demo" and Identity{0}[environment] = "APPROVED_DEMO" then Source else error "ETL Monitoring requires the configured DEMO target and APPROVED_DEMO marker",
+				    View = Guarded{[Schema="monitoring", Item="vw_etl_step_status"]}[Data]
+				in
+				    View
+
+	annotation PBI_ResultType = Table

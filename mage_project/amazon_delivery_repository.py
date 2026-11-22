@@ -151,7 +151,9 @@ def _load_incoming(cursor, batch_df: pd.DataFrame) -> None:
     """
 
     chunk_size = 500
-    cursor.fast_executemany = True
+    # ODBC fast parameter discovery cannot resolve this local temp table under
+    # the restricted TEST execution context. Binding normally preserves DML.
+    cursor.fast_executemany = os.environ.get('AMAZON_MONITORING_ENABLED') != '1'
 
     for start in range(0, len(batch_df), chunk_size):
         chunk_df = batch_df.iloc[start:start + chunk_size]
@@ -272,15 +274,20 @@ def _apply_inserts(
 
 
 def export_amazon_delivery(payload: dict[str, Any]) -> pd.DataFrame:
+    from etl_monitoring.pipeline_bridge import begin_export, bind_batch, publish_export, export_failed
+    monitoring_ctx = None
+    commit_attempted = False
     load_batch_id = str(uuid.uuid4())
     loaded_at = datetime.now(timezone.utc).replace(tzinfo=None)
     connection = pyodbc.connect(get_connection_string(), autocommit=False)
     audit_created = False
     try:
         cursor = connection.cursor()
+        monitoring_ctx = begin_export(payload)
         _insert_started_audit(cursor, payload, load_batch_id)
         connection.commit()
         audit_created = True
+        bind_batch(monitoring_ctx, payload, load_batch_id)
 
         # Serialize staging writes against the downstream DDS build. This lock
         # belongs to the transaction and is released by commit/rollback.
@@ -363,8 +370,12 @@ def export_amazon_delivery(payload: dict[str, Any]) -> pd.DataFrame:
             warning,
             load_batch_id,
         )
+        publish_export(cursor, monitoring_ctx, rows_read, rows_inserted, rows_updated,
+                       rows_unchanged, rows_rejected)
+        commit_attempted = True
         connection.commit()
-        return build_output(
+        commit_attempted = False
+        output = build_output(
             payload,
             load_batch_id,
             'SUCCEEDED',
@@ -373,9 +384,16 @@ def export_amazon_delivery(payload: dict[str, Any]) -> pd.DataFrame:
             rows_unchanged,
             warning,
         )
+        if monitoring_ctx is not None:
+            output['monitoring_context'] = payload['monitoring_context']
+        return output
     except Exception as error:
-        connection.rollback()
-        if audit_created:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+        export_failed(monitoring_ctx, error, commit_attempted)
+        if audit_created and not commit_attempted:
             try:
                 failure_cursor = connection.cursor()
                 failure_cursor.execute(
@@ -392,7 +410,10 @@ def export_amazon_delivery(payload: dict[str, Any]) -> pd.DataFrame:
                 )
                 connection.commit()
             except Exception:
-                connection.rollback()
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
         raise
     finally:
         connection.close()
