@@ -52,7 +52,8 @@ blocks:
 - all_upstream_blocks_executed: true
   color: null
   configuration: {}
-  downstream_blocks: []
+  downstream_blocks:
+  - build_amazon_delivery_dds
   executor_config: null
   executor_type: local_python
   has_callback: false
@@ -65,13 +66,29 @@ blocks:
   upstream_blocks:
   - export_incremental_amazon_delivery
   uuid: verify_amazon_delivery_batch
+- all_upstream_blocks_executed: true
+  color: null
+  configuration: {}
+  downstream_blocks: []
+  executor_config: null
+  executor_type: local_python
+  has_callback: false
+  language: python
+  name: build_amazon_delivery_dds
+  retry_config: null
+  status: executed
+  timeout: null
+  type: custom
+  upstream_blocks:
+  - verify_amazon_delivery_batch
+  uuid: build_amazon_delivery_dds
 cache_block_output_in_memory: false
 callbacks: []
 concurrency_config: {}
 conditionals: []
 created_at: '2026-10-25 00:00:00+07:00'
 data_integration: null
-description: Load one configured Amazon Delivery date batch from the shared raw CSV.
+description: CSV upsert -> Verify staging -> dbt build and tests -> DDS reconciliation.
 executor_config: {}
 executor_count: 1
 executor_type: null
@@ -89,6 +106,6 @@ tags:
 type: python
 uuid: amazon_delivery_incremental_load
 variables:
-  source_file_path: D:/BI/Mini Project/Demo/demo_incremental.csv
+  source_file_path: demo/etl_batches/05_rerun.csv
 variables_dir: C:\Users\PC\.mage_data\mage_project
 widgets: []

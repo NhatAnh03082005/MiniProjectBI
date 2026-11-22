@@ -1,0 +1,113 @@
+{
+  "date": "2026-11-22",
+  "method": "Offline YAML/source/catalog/local-log checks; no SQL connection or runtime build",
+  "coverage_columns": {
+    "raw_amazon_delivery": 26,
+    "stg_amazon_delivery": 22,
+    "int_delivery_validation_errors": 10,
+    "int_delivery_accepted": 37,
+    "int_delivery_enriched": 37,
+    "delivery_rejections": 10,
+    "dim_date": 10,
+    "dim_delivery_condition": 3,
+    "dim_vehicle": 2,
+    "dim_area": 2,
+    "dim_category": 2,
+    "fact_delivery": 33
+  },
+  "total_documented_columns": 194,
+  "preserved": "Existing tests, source database/schema, model names/config and relationships unchanged; only descriptions/meta and descriptive columns added",
+  "local_links_checked": [
+    "README.md",
+    "project_management/DATA_DICTIONARY.md",
+    "project_management/SOURCE_TO_TARGET_MAPPING.md",
+    "project_management/DATA_CONTRACT.md",
+    "project_management/KPI_DICTIONARY.md",
+    "project_management/PROJECT_CONTEXT.md",
+    "report/METADATA_AUDIT_HANDOFF.md",
+    "dbt_project/README.md"
+  ],
+  "broken_links": [],
+  "catalog_generated_at": "2026-11-13T16:02:19.411205Z",
+  "previous_user_runtime_summaries": [
+    {
+      "load_batch_id": "4cd9acf8-8218-4585-92b2-95d9d94cc235",
+      "dbt_attempt_id": "0ef3467d-aa05-4bdd-884e-2259dcb33e6c",
+      "etl_status": "SUCCEEDED",
+      "tests_total": 79,
+      "tests_pass": 78,
+      "tests_warn": 1,
+      "tests_fail": 0,
+      "tests_error": 0,
+      "staging_rows": 43739,
+      "fact_rows": 43594,
+      "dbt_rejected_distinct_rows": 145
+    },
+    {
+      "load_batch_id": "62de48e1-3921-41e1-8ee5-4f848425bfdb",
+      "dbt_attempt_id": "2da35766-3b5c-46aa-9f49-c44a67e2d56d",
+      "etl_status": "SUCCEEDED",
+      "tests_total": 79,
+      "tests_pass": 78,
+      "tests_warn": 1,
+      "tests_fail": 0,
+      "tests_error": 0,
+      "staging_rows": 43741,
+      "fact_rows": 43596,
+      "dbt_rejected_distinct_rows": 145
+    },
+    {
+      "load_batch_id": "ac20f5b9-f0a0-4673-9c94-e16295596dd2",
+      "dbt_attempt_id": "072f3e75-455e-41cf-9421-56cb8dcc5999",
+      "etl_status": "SUCCEEDED",
+      "tests_total": 79,
+      "tests_pass": 78,
+      "tests_warn": 1,
+      "tests_fail": 0,
+      "tests_error": 0,
+      "staging_rows": 27467,
+      "fact_rows": 27349,
+      "dbt_rejected_distinct_rows": 118
+    },
+    {
+      "load_batch_id": "adb53d3d-dc06-47dd-9fa0-0ea7d586e5ca",
+      "dbt_attempt_id": "a9a46b47-c08a-435b-be59-b392221ddefb",
+      "etl_status": "SUCCEEDED",
+      "tests_total": 79,
+      "tests_pass": 78,
+      "tests_warn": 1,
+      "tests_fail": 0,
+      "tests_error": 0,
+      "staging_rows": 43741,
+      "fact_rows": 43596,
+      "dbt_rejected_distinct_rows": 145
+    },
+    {
+      "load_batch_id": "f59451fd-14d9-42cc-9857-3354932edc2b",
+      "dbt_attempt_id": "f5d58c8f-cd6a-47c8-9fbf-415c58365e41",
+      "etl_status": "SUCCEEDED",
+      "tests_total": 79,
+      "tests_pass": 78,
+      "tests_warn": 1,
+      "tests_fail": 0,
+      "tests_error": 0,
+      "staging_rows": 8058,
+      "fact_rows": 7987,
+      "dbt_rejected_distinct_rows": 71
+    }
+  ],
+  "not_executed": [
+    "SQL schema inspection",
+    "ETL",
+    "dbt build",
+    "dbt docs generate",
+    "Power BI/AI runtime checks"
+  ],
+  "checks_passed": [
+    "All model YAML parses",
+    "All existing operational metadata/tests preserved",
+    "194 source/model column descriptions complete",
+    "DDL column counts raw=26, load_batch=18, dbt_run=9",
+    "Local documentation links resolve"
+  ]
+}

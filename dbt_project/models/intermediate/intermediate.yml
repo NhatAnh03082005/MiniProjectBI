@@ -1,67 +1,270 @@
 version: 2
-
 models:
-  - name: int_delivery_validation_errors
-    description: One row per hard rule violation, linked to its immutable raw row.
-    columns:
-      - name: staging_row_id
-        tests: [not_null]
-      - name: column_name
-        tests: [not_null]
-      - name: error_code
-        tests: [not_null]
-
-  - name: int_delivery_accepted
-    description: Enriched rows without hard rule violations; shared by Fact and categorical Dimensions.
-    columns:
-      - name: staging_row_id
-        tests: [not_null, unique]
-      - name: order_id
-        tests: [not_null, unique]
-
-  - name: int_delivery_enriched
-    description: >
-      Enriched delivery records before hard-rule filtering. It retains invalid
-      or missing source values with flags; accepted rows feed Dimensions and Fact.
-      Duplicate resolution across batches remains pending LOAD-01.
-    columns:
-      - name: delivery_key
-        description: SHA-256 technical key derived deterministically from order_id.
-      - name: order_id
-        description: >
-          Business key for the baseline snapshot. Uniqueness across rerun or
-          repeated batches cannot be tested until LOAD-01 defines a policy.
-      - name: weather_name
-        description: Missing source values become Unknown when the field is configured as optional.
-      - name: traffic_level
-        description: Missing source values become Unknown when the field is configured as optional.
-      - name: vehicle_type
-        description: Optional missing values become Unknown and map to the vehicle Unknown Member.
-      - name: area_name
-        description: Optional missing values become Unknown and map to the area Unknown Member.
-      - name: category_name
-        description: Optional missing values become Unknown and map to the category Unknown Member.
-      - name: pickup_delay_minutes
-      - name: pickup_rollover_flag
-      - name: delivery_distance_km
-        description: Computed Haversine distance retained even when above the configured analysis threshold.
-      - name: valid_distance_flag
-        description: One only for calculable distances at or below the configured threshold.
-      - name: distance_outlier_flag
-        description: One when the calculated distance exceeds the configured threshold.
-      - name: distance_status
-        description: Valid, above-threshold outlier, or reason distance could not be calculated.
-      - name: valid_rating_flag
-      - name: missing_operational_context_flag
-      - name: source_file_name
-        tests:
-          - not_null
-      - name: source_row_number
-        tests:
-          - not_null
-      - name: load_batch_id
-        tests:
-          - not_null
-      - name: loaded_at
-        tests:
-          - not_null
+- name: int_delivery_validation_errors
+  description: View một dòng cho mỗi vi phạm hard rule của cột ở current-state staging. Một dòng nguồn có thể có
+    nhiều lỗi; không phải lịch sử lỗi từng lần dbt chạy.
+  columns:
+  - name: staging_row_id
+    tests:
+    - not_null
+    description: Định danh BIGINT IDENTITY của dòng current-state staging; ổn định khi upsert cập nhật cùng đơn.
+      Dùng nối lỗi dbt với staging, không phải ID mỗi lần chạy.
+  - name: column_name
+    tests:
+    - not_null
+    description: Tên cột CSV vi phạm hard rule; một staging_row_id có thể có nhiều cột lỗi.
+  - name: error_code
+    tests:
+    - not_null
+    description: Mã hard rule, ví dụ MISSING_VALUE/MISSING_ORDER_ID, INVALID_CAST, DUPLICATE_ORDER_ID, NEGATIVE_VALUE,
+      OUT_OF_RANGE; phụ thuộc cấu hình.
+  - name: order_id
+    description: Order_ID đã trim, giữ hoa/thường. Mage nhận diện khóa bằng trim/case-fold để upsert; Fact kiểm
+      soát duy nhất và không null. Không phải mã nhân viên hay chứng cứ giao thành công.
+  - name: source_file_name
+    description: Tên tệp của lần insert đầu tiên, truyền từ staging; không tự đổi sang tệp sửa mới nhất khi upsert.
+  - name: source_row_number
+    description: Số thứ tự bản ghi CSV (bắt đầu 1, không tính header) ở lần insert đầu; không đồng nhất số dòng
+      vật lý nếu CSV có trường nhiều dòng.
+  - name: load_batch_id
+    description: FK/lineage tới audit.load_batch của lần insert đầu; không phải batch cập nhật gần nhất và không
+      phải run dbt hiện tại.
+  - name: loaded_at
+    description: Thời điểm insert staging lần đầu, UTC DATETIME2(3), được truyền qua dbt tới Fact; không phải thời
+      điểm build Fact/refresh Power BI.
+  - name: raw_value
+    description: 'Giá trị raw của cột lỗi chuyển sang NVARCHAR(4000) để giải thích; có thể NULL. Có thể chứa tọa
+      độ: chỉ dùng đối soát kỹ thuật, không gửi AI/public.'
+  - name: expected_rule
+    description: Mô tả điều kiện mong đợi của cột lấy từ delivery_rules.fields; optional được sửa nhãn tương ứng.
+- name: int_delivery_accepted
+  description: View dòng enriched không có vi phạm hard rule, một dòng/order_id hợp lệ; dùng chung cho Fact và Dimension
+    phân loại. Required/range lấy từ delivery_rules, không từ số liệu profiling cũ.
+  columns:
+  - name: staging_row_id
+    tests:
+    - not_null
+    - unique
+    description: Định danh BIGINT IDENTITY của dòng current-state staging; ổn định khi upsert cập nhật cùng đơn.
+      Dùng nối lỗi dbt với staging, không phải ID mỗi lần chạy.
+  - name: order_id
+    tests:
+    - not_null
+    - unique
+    description: Order_ID đã trim, giữ hoa/thường. Mage nhận diện khóa bằng trim/case-fold để upsert; Fact kiểm
+      soát duy nhất và không null. Không phải mã nhân viên hay chứng cứ giao thành công.
+  - name: delivery_key
+    description: SHA2_256 của order_id đã trim, convert CHAR(64) hex trong SQL; khác row_hash của Mage. Xác định
+      từ mã hiện hành, không tự chuẩn hóa hoa/thường trước hash.
+  - name: order_date
+    description: Ngày nghiệp vụ parse DATE theo style cấu hình (23); không phải thời gian chạy ETL hoặc watermark.
+      Mage loại ngày không parse được trước staging.
+  - name: order_time
+    description: Giờ đặt hàng TRY_CONVERT(time(0)); thiếu/không parse được là hard-rule theo cấu hình required hiện
+      tại, không thay bằng nửa đêm.
+  - name: pickup_time
+    description: Giờ pickup TRY_CONVERT(time(0)); thiếu/không parse được là hard-rule hiện tại. Pickup nhỏ hơn order
+      time được giả định sang ngày kế tiếp.
+  - name: order_hour
+    description: DATEPART(hour, order_time), kiểu INT do SQL suy ra, giá trị 0–23; NULL khi giờ thiếu ở lớp trước
+      accepted.
+  - name: time_period
+    description: 'Nhóm giờ cấu hình: Night <6, Morning <12, Afternoon <18, còn lại Evening; giờ thiếu thành Unknown
+      ở enriched.'
+  - name: agent_age
+    description: Tuổi parse bằng TRY_CONVERT(smallint); thiếu/cast lỗi/âm bị hard-rule dbt loại theo cấu hình hiện
+      tại. Tuổi 0–17 không âm vẫn giữ và gắn cờ dưới 18.
+  - name: age_group
+    description: 'Nhóm tuổi theo delivery_rules.age_groups: Under 18, 18-24, 25-34, 35-44, 45+; thiếu thành Unknown
+      ở enriched.'
+  - name: underage_agent_flag
+    description: 'BIT: 1 khi tuổi parse dưới 18, còn lại 0; thiếu tuổi không tự được coi là hợp lệ. Không loại dòng
+      chỉ vì tuổi dưới 18.'
+  - name: agent_rating_raw
+    description: Rating nguồn sau TRY_CONVERT(decimal(4,2)); có thể thiếu/ngoài miền ở lớp trước accepted. Cấu hình
+      hiện tại loại dòng thiếu hoặc ngoài [1,5] khỏi Fact; raw nguồn vẫn giữ ở staging.
+  - name: agent_rating_valid
+    description: Rating numeric thuộc [1,5], còn lại NULL ở enriched. KPI rating chỉ dùng trường này với valid_rating_flag=1.
+  - name: rating_group
+    description: Nhóm rating theo cấu hình; Unknown khi thiếu, Invalid khi ngoài miền ở enriched. Những dòng vi
+      phạm required/range hiện không vào Fact.
+  - name: valid_rating_flag
+    description: 'BIT: 1 khi rating trong [1,5], ngược lại 0; dùng lọc KPI rating, không thay thế hard-rule accepted.'
+  - name: weather_name
+    description: Weather đã trim; ở enriched/Dimension, thiếu được gán Unknown khi trường optional. Một phần natural
+      key tổ hợp Weather–Traffic.
+  - name: traffic_level
+    description: Traffic đã trim; ở enriched/Dimension thiếu thành Unknown khi optional; không phải trạng thái ETL.
+  - name: vehicle_type
+    description: Loại phương tiện đã trim; ở enriched/Dimension thiếu thành Unknown khi optional; không tự gộp bicycle
+      vào loại khác.
+  - name: area_name_raw
+    description: Area đã trim tại dbt, giữ lỗi chính tả nguồn để đối soát; chuỗi nguyên trạng vẫn nằm trong staging.raw_amazon_delivery.Area.
+  - name: area_name
+    description: Area chuẩn hóa bằng area_aliases (Metropolitian → Metropolitan); enriched/Dimension dùng Unknown
+      cho thiếu optional.
+  - name: category_name
+    description: Danh mục đã trim; enriched/Dimension dùng Unknown khi thiếu optional. Grocery vẫn là nhóm độc lập.
+  - name: delivery_time_minutes
+    description: Thời lượng TRY_CONVERT(decimal(10,2)); đơn vị phút là giả định của nhóm, nguồn chưa xác nhận. Required
+      và không âm theo cấu hình hiện tại; giữ IQR outlier.
+  - name: above_baseline_p90_flag
+    description: 'BIT: 1 khi thời lượng >195 phút (baseline hiện tại), 0 nếu không vượt, NULL nếu thời lượng NULL;
+      không phải SLA hoặc giao trễ.'
+  - name: delivery_time_iqr_outlier_flag
+    description: 'BIT: 1 nếu thời lượng <-15 hoặc >265 theo cấu hình hiện tại, 0 nếu trong khoảng, NULL nếu thiếu.
+      Cờ thống kê, không tự loại dòng.'
+  - name: pickup_delay_minutes
+    description: 'DECIMAL(10,2): chênh lệch giây giữa pickup và order timestamp chia 60; cộng 1 ngày khi pickup_time
+      < order_time. NULL khi thiếu đầu vào.'
+  - name: pickup_rollover_flag
+    description: 'BIT: 1 nếu pickup_time < order_time và hai giờ parse được, 0 nếu không; NULL nếu thiếu giờ. Quy
+      tắc sang ngày là giả định xử lý của nhóm.'
+  - name: delivery_distance_km
+    description: 'FLOAT: khoảng cách Haversine với bán kính 6371 km, không phải quãng đường giao thực. Giữ giá trị
+      >50; NULL khi không tính được hoặc store=(0,0).'
+  - name: valid_distance_flag
+    description: 'BIT: 1 khi Haversine tính được và <=50 km theo cấu hình, còn lại 0. KPI khoảng cách phải lọc cờ
+      này.'
+  - name: distance_outlier_flag
+    description: 'BIT: 1 nếu Haversine tính được >50 km, ngược lại 0; không tự loại dòng Fact.'
+  - name: distance_status
+    description: 'Nhãn nguyên nhân/đánh giá: Valid, Outlier >50 km, Store coordinates (0,0), Not calculable; sinh
+      theo cấu hình khoảng cách.'
+  - name: distance_band
+    description: 'Nhóm Haversine theo cấu hình: [0,5), [5,10), [10,15), [15,20), [20,50] km và nhãn >50/không tính
+      được/store=(0,0). Không gộp mọi dòng không hợp lệ thành Unknown.'
+  - name: delivery_count
+    description: TINYINT hằng số 1 cho mỗi dòng; SUM trong Fact bằng số bản ghi khi grain không trùng. Không phải
+      số sản phẩm hoặc giao thành công.
+  - name: missing_operational_context_flag
+    description: 'BIT: thiếu một trong order_time, weather_name, traffic_level theo delivery_rules.operational_context_fields.
+      Không khẳng định đủ mọi trường vận hành.'
+  - name: source_file_name
+    description: Tên tệp của lần insert đầu tiên, truyền từ staging; không tự đổi sang tệp sửa mới nhất khi upsert.
+  - name: source_row_number
+    description: Số thứ tự bản ghi CSV (bắt đầu 1, không tính header) ở lần insert đầu; không đồng nhất số dòng
+      vật lý nếu CSV có trường nhiều dòng.
+  - name: load_batch_id
+    description: FK/lineage tới audit.load_batch của lần insert đầu; không phải batch cập nhật gần nhất và không
+      phải run dbt hiện tại.
+  - name: loaded_at
+    description: Thời điểm insert staging lần đầu, UTC DATETIME2(3), được truyền qua dbt tới Fact; không phải thời
+      điểm build Fact/refresh Power BI.
+- name: int_delivery_enriched
+  description: 'View dẫn xuất một dòng/current-state staging_row_id trước hard-rule filtering: hash khóa, nhóm,
+    pickup, Haversine và cờ. Mage đã upsert khóa giữa các batch; CTE deduplication_pending là pass-through, không
+    phải một cơ chế dedup mới.'
+  columns:
+  - name: delivery_key
+    description: SHA2_256 của order_id đã trim, convert CHAR(64) hex trong SQL; khác row_hash của Mage. Xác định
+      từ mã hiện hành, không tự chuẩn hóa hoa/thường trước hash.
+  - name: order_id
+    description: Order_ID đã trim, giữ hoa/thường. Mage nhận diện khóa bằng trim/case-fold để upsert; Fact kiểm
+      soát duy nhất và không null. Không phải mã nhân viên hay chứng cứ giao thành công.
+  - name: weather_name
+    description: Weather đã trim; ở enriched/Dimension, thiếu được gán Unknown khi trường optional. Một phần natural
+      key tổ hợp Weather–Traffic.
+  - name: traffic_level
+    description: Traffic đã trim; ở enriched/Dimension thiếu thành Unknown khi optional; không phải trạng thái ETL.
+  - name: vehicle_type
+    description: Loại phương tiện đã trim; ở enriched/Dimension thiếu thành Unknown khi optional; không tự gộp bicycle
+      vào loại khác.
+  - name: area_name
+    description: Area chuẩn hóa bằng area_aliases (Metropolitian → Metropolitan); enriched/Dimension dùng Unknown
+      cho thiếu optional.
+  - name: category_name
+    description: Danh mục đã trim; enriched/Dimension dùng Unknown khi thiếu optional. Grocery vẫn là nhóm độc lập.
+  - name: pickup_delay_minutes
+    description: 'DECIMAL(10,2): chênh lệch giây giữa pickup và order timestamp chia 60; cộng 1 ngày khi pickup_time
+      < order_time. NULL khi thiếu đầu vào.'
+  - name: pickup_rollover_flag
+    description: 'BIT: 1 nếu pickup_time < order_time và hai giờ parse được, 0 nếu không; NULL nếu thiếu giờ. Quy
+      tắc sang ngày là giả định xử lý của nhóm.'
+  - name: delivery_distance_km
+    description: 'FLOAT: khoảng cách Haversine với bán kính 6371 km, không phải quãng đường giao thực. Giữ giá trị
+      >50; NULL khi không tính được hoặc store=(0,0).'
+  - name: valid_distance_flag
+    description: 'BIT: 1 khi Haversine tính được và <=50 km theo cấu hình, còn lại 0. KPI khoảng cách phải lọc cờ
+      này.'
+  - name: distance_outlier_flag
+    description: 'BIT: 1 nếu Haversine tính được >50 km, ngược lại 0; không tự loại dòng Fact.'
+  - name: distance_status
+    description: 'Nhãn nguyên nhân/đánh giá: Valid, Outlier >50 km, Store coordinates (0,0), Not calculable; sinh
+      theo cấu hình khoảng cách.'
+  - name: valid_rating_flag
+    description: 'BIT: 1 khi rating trong [1,5], ngược lại 0; dùng lọc KPI rating, không thay thế hard-rule accepted.'
+  - name: missing_operational_context_flag
+    description: 'BIT: thiếu một trong order_time, weather_name, traffic_level theo delivery_rules.operational_context_fields.
+      Không khẳng định đủ mọi trường vận hành.'
+  - name: source_file_name
+    tests:
+    - not_null
+    description: Tên tệp của lần insert đầu tiên, truyền từ staging; không tự đổi sang tệp sửa mới nhất khi upsert.
+  - name: source_row_number
+    tests:
+    - not_null
+    description: Số thứ tự bản ghi CSV (bắt đầu 1, không tính header) ở lần insert đầu; không đồng nhất số dòng
+      vật lý nếu CSV có trường nhiều dòng.
+  - name: load_batch_id
+    tests:
+    - not_null
+    description: FK/lineage tới audit.load_batch của lần insert đầu; không phải batch cập nhật gần nhất và không
+      phải run dbt hiện tại.
+  - name: loaded_at
+    tests:
+    - not_null
+    description: Thời điểm insert staging lần đầu, UTC DATETIME2(3), được truyền qua dbt tới Fact; không phải thời
+      điểm build Fact/refresh Power BI.
+  - name: staging_row_id
+    description: Định danh BIGINT IDENTITY của dòng current-state staging; ổn định khi upsert cập nhật cùng đơn.
+      Dùng nối lỗi dbt với staging, không phải ID mỗi lần chạy.
+  - name: order_date
+    description: Ngày nghiệp vụ parse DATE theo style cấu hình (23); không phải thời gian chạy ETL hoặc watermark.
+      Mage loại ngày không parse được trước staging.
+  - name: order_time
+    description: Giờ đặt hàng TRY_CONVERT(time(0)); thiếu/không parse được là hard-rule theo cấu hình required hiện
+      tại, không thay bằng nửa đêm.
+  - name: pickup_time
+    description: Giờ pickup TRY_CONVERT(time(0)); thiếu/không parse được là hard-rule hiện tại. Pickup nhỏ hơn order
+      time được giả định sang ngày kế tiếp.
+  - name: order_hour
+    description: DATEPART(hour, order_time), kiểu INT do SQL suy ra, giá trị 0–23; NULL khi giờ thiếu ở lớp trước
+      accepted.
+  - name: time_period
+    description: 'Nhóm giờ cấu hình: Night <6, Morning <12, Afternoon <18, còn lại Evening; giờ thiếu thành Unknown
+      ở enriched.'
+  - name: agent_age
+    description: Tuổi parse bằng TRY_CONVERT(smallint); thiếu/cast lỗi/âm bị hard-rule dbt loại theo cấu hình hiện
+      tại. Tuổi 0–17 không âm vẫn giữ và gắn cờ dưới 18.
+  - name: age_group
+    description: 'Nhóm tuổi theo delivery_rules.age_groups: Under 18, 18-24, 25-34, 35-44, 45+; thiếu thành Unknown
+      ở enriched.'
+  - name: underage_agent_flag
+    description: 'BIT: 1 khi tuổi parse dưới 18, còn lại 0; thiếu tuổi không tự được coi là hợp lệ. Không loại dòng
+      chỉ vì tuổi dưới 18.'
+  - name: agent_rating_raw
+    description: Rating nguồn sau TRY_CONVERT(decimal(4,2)); có thể thiếu/ngoài miền ở lớp trước accepted. Cấu hình
+      hiện tại loại dòng thiếu hoặc ngoài [1,5] khỏi Fact; raw nguồn vẫn giữ ở staging.
+  - name: agent_rating_valid
+    description: Rating numeric thuộc [1,5], còn lại NULL ở enriched. KPI rating chỉ dùng trường này với valid_rating_flag=1.
+  - name: rating_group
+    description: Nhóm rating theo cấu hình; Unknown khi thiếu, Invalid khi ngoài miền ở enriched. Những dòng vi
+      phạm required/range hiện không vào Fact.
+  - name: area_name_raw
+    description: Area đã trim tại dbt, giữ lỗi chính tả nguồn để đối soát; chuỗi nguyên trạng vẫn nằm trong staging.raw_amazon_delivery.Area.
+  - name: delivery_time_minutes
+    description: Thời lượng TRY_CONVERT(decimal(10,2)); đơn vị phút là giả định của nhóm, nguồn chưa xác nhận. Required
+      và không âm theo cấu hình hiện tại; giữ IQR outlier.
+  - name: above_baseline_p90_flag
+    description: 'BIT: 1 khi thời lượng >195 phút (baseline hiện tại), 0 nếu không vượt, NULL nếu thời lượng NULL;
+      không phải SLA hoặc giao trễ.'
+  - name: delivery_time_iqr_outlier_flag
+    description: 'BIT: 1 nếu thời lượng <-15 hoặc >265 theo cấu hình hiện tại, 0 nếu trong khoảng, NULL nếu thiếu.
+      Cờ thống kê, không tự loại dòng.'
+  - name: distance_band
+    description: 'Nhóm Haversine theo cấu hình: [0,5), [5,10), [10,15), [15,20), [20,50] km và nhãn >50/không tính
+      được/store=(0,0). Không gộp mọi dòng không hợp lệ thành Unknown.'
+  - name: delivery_count
+    description: TINYINT hằng số 1 cho mỗi dòng; SUM trong Fact bằng số bản ghi khi grain không trùng. Không phải
+      số sản phẩm hoặc giao thành công.

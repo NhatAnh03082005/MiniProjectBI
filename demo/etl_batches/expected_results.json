@@ -1,0 +1,93 @@
+{
+  "source": "data/raw/amazon_delivery.csv",
+  "source_sha256": "b922dfbdfed11ac2c9508c9e915326364fc95a2d00440b4c3e01e56bffb6a4ed",
+  "source_rows": 43739,
+  "precondition": "Fresh empty demo database; run files 01..05 exactly once in order.",
+  "synthetic_updates": [
+    {
+      "Order_ID": "abwe493376570",
+      "Delivery_Time": "150"
+    },
+    {
+      "Order_ID": "acnn902187983",
+      "Delivery_Time": "150"
+    }
+  ],
+  "runs": [
+    {
+      "file": "demo/etl_batches/01_baseline.csv",
+      "batch_type": "FULL_LOAD",
+      "sha256": "db04857988f8b789738c10f3442bca030b106faa997ee2e388b663ab1596baf0",
+      "expected_ingestion": {
+        "rows_read": 8058,
+        "rows_inserted": 8058,
+        "rows_updated": 0,
+        "rows_unchanged": 0,
+        "rows_rejected": 0,
+        "rows_loaded": 8058,
+        "staging_total_after": 8058
+      }
+    },
+    {
+      "file": "demo/etl_batches/02_incremental.csv",
+      "batch_type": "INCREMENTAL",
+      "sha256": "97d2a323e7f322520a54145e499f0f299908e6edae385df6a6e9600cddad0ec4",
+      "expected_ingestion": {
+        "rows_read": 19409,
+        "rows_inserted": 19409,
+        "rows_updated": 0,
+        "rows_unchanged": 0,
+        "rows_rejected": 0,
+        "rows_loaded": 19409,
+        "staging_total_after": 27467
+      }
+    },
+    {
+      "file": "demo/etl_batches/03_incremental.csv",
+      "batch_type": "INCREMENTAL",
+      "sha256": "3908cd19cd3208cdc8d552ec6e5654190752ae63080bf458f9e9930a912618db",
+      "expected_ingestion": {
+        "rows_read": 16272,
+        "rows_inserted": 16272,
+        "rows_updated": 0,
+        "rows_unchanged": 0,
+        "rows_rejected": 0,
+        "rows_loaded": 16272,
+        "staging_total_after": 43739
+      }
+    },
+    {
+      "file": "demo/etl_batches/04_mixed.csv",
+      "batch_type": "INCREMENTAL",
+      "sha256": "e9b3669205c5dbe7d83e0f6c3f10fa5636f61ce8dec983247213827cfb139272",
+      "expected_ingestion": {
+        "rows_read": 8,
+        "rows_inserted": 2,
+        "rows_updated": 2,
+        "rows_unchanged": 2,
+        "rows_rejected": 2,
+        "rows_loaded": 4,
+        "staging_total_after": 43741
+      }
+    },
+    {
+      "file": "demo/etl_batches/05_rerun.csv",
+      "batch_type": "INCREMENTAL",
+      "sha256": "e9b3669205c5dbe7d83e0f6c3f10fa5636f61ce8dec983247213827cfb139272",
+      "expected_ingestion": {
+        "rows_read": 8,
+        "rows_inserted": 0,
+        "rows_updated": 0,
+        "rows_unchanged": 6,
+        "rows_rejected": 2,
+        "rows_loaded": 0,
+        "staging_total_after": 43741
+      }
+    }
+  ],
+  "failure_files": [
+    "06_bad_header.csv",
+    "07_duplicate_id.csv"
+  ],
+  "note": "These are calculated ingestion expectations, not database test results. dbt rejection is separate. Rerun keeps the two invalid rows rejected."
+}

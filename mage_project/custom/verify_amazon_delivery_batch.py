@@ -1,4 +1,5 @@
 import os
+from contextlib import closing
 
 import pandas as pd
 import pyodbc
@@ -9,17 +10,7 @@ if 'test' not in globals():
     from mage_ai.data_preparation.decorators import test
 
 
-def get_connection_string():
-    required = ('MSSQL_SERVER', 'MSSQL_DATABASE', 'MSSQL_DRIVER')
-    missing = [name for name in required if not os.environ.get(name)]
-    if missing:
-        raise RuntimeError('Thiếu biến môi trường: ' + ', '.join(missing))
-    return (
-        f"DRIVER={{{os.environ['MSSQL_DRIVER']}}};"
-        f"SERVER={os.environ['MSSQL_SERVER']};"
-        f"DATABASE={os.environ['MSSQL_DATABASE']};"
-        'Trusted_Connection=yes;Encrypt=yes;TrustServerCertificate=yes;'
-    )
+from mage_project.amazon_delivery_repository import get_connection_string
 
 
 @custom
@@ -29,7 +20,7 @@ def verify_amazon_delivery_batch(export_result, *args, **kwargs):
     result = export_result.iloc[0]
     load_batch_id = str(result['load_batch_id'])
 
-    with pyodbc.connect(get_connection_string()) as connection:
+    with closing(pyodbc.connect(get_connection_string(), autocommit=True)) as connection:
         cursor = connection.cursor()
         cursor.execute(
             """
@@ -99,8 +90,11 @@ def verify_amazon_delivery_batch(export_result, *args, **kwargs):
     return pd.DataFrame([{
         'load_batch_id': load_batch_id,
         'batch_name': str(result['batch_name']),
+        'batch_type': str(result['batch_type']),
+        'source_file_name': str(result['source_file_name']),
         'status': status,
         'rows_read': expected_values[0],
+        'rows_loaded': expected_values[1],
         'rows_inserted': expected_values[3],
         'rows_updated': expected_values[4],
         'rows_unchanged': expected_values[5],

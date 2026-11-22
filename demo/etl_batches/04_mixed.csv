@@ -1,0 +1,9 @@
+Order_ID,Agent_Age,Agent_Rating,Store_Latitude,Store_Longitude,Drop_Latitude,Drop_Longitude,Order_Date,Order_Time,Pickup_Time,Weather,Traffic,Vehicle,Area,Delivery_Time,Category
+seminar3_new_001,30,4.5,12.91,77.68,12.92,77.69,2022-04-06,10:00:00,10:10:00,Sunny,Low ,motorcycle ,Urban ,120,Clothing
+seminar3_new_002,30,4.5,12.91,77.68,12.92,77.69,2022-04-06,10:00:00,10:10:00,Sunny,Low ,motorcycle ,Urban ,130,Clothing
+abwe493376570,33,4.9,15.516833,73.768172,15.566833,73.818172,2022-02-11,21:35:00,21:50:00,Sunny,Jam ,scooter ,Metropolitian ,150,Kitchen
+acnn902187983,23,4.8,22.577821,88.400581,22.607821,88.430581,2022-02-11,19:10:00,19:20:00,Fog,Jam ,motorcycle ,Metropolitian ,150,Clothing
+adcv392099635,38,4.0,0.0,0.0,0.02,0.02,2022-02-11,09:00:00,09:10:00,Sandstorms,Low ,motorcycle ,Metropolitian ,135,Clothing
+addy020659955,30,4.7,23.232357,77.429989,23.292357,77.489989,2022-02-11,23:15:00,23:20:00,Windy,Low ,scooter ,Urban ,115,Kitchen
+,30,4.5,12.91,77.68,12.92,77.69,2022-04-06,10:00:00,10:10:00,Sunny,Low ,motorcycle ,Urban ,120,Clothing
+seminar3_bad_date,30,4.5,12.91,77.68,12.92,77.69,2022-02-30,10:00:00,10:10:00,Sunny,Low ,motorcycle ,Urban ,120,Clothing

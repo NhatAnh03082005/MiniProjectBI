@@ -45,3 +45,10 @@
 | DEC-064 | 2026-11-12 | Mage giữ validation kỹ thuật/upsert/audit; dbt tiếp tục trim, null normalization, cast, business rules và Star Schema | Tránh lặp transformation và cho phép hai workstream phát triển độc lập | Nhóm | Đã xác nhận |
 
 Không renumber Decision ID. Quyết định kiến trúc không đồng nghĩa thành phần kỹ thuật đã được triển khai.
+
+
+## Ghi nhận metadata — 22/11/2026
+
+Đối chiếu code triển khai với tài liệu: raw là current-state upsert; Fact có 33 cột (thêm distance_outlier_flag/distance_status); rating/giờ required theo delivery_rules; Haversine >50 giữ cho giải thích nhưng không vào KPI valid distance; audit.dbt_run lưu attempt riêng. Dictionary/mapping/contract/KPI traceability đã đồng bộ mô tả.
+
+Đây là ghi nhận hiện trạng, không phải quyết định đổi/phê duyệt business rules. Khác biệt với baseline giữ missing/rating ngoài miền vẫn cần nhóm xác nhận; không thay SQL, DDL, DAX, AI logic hay pipeline trong task metadata. Kiểm tra tĩnh và bằng chứng: report/METADATA_AUDIT_HANDOFF.md.

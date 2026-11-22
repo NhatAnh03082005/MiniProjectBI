@@ -18,12 +18,26 @@ def get_connection_string() -> str:
     missing = [name for name in required if not os.environ.get(name)]
     if missing:
         raise RuntimeError('Thiếu biến môi trường: ' + ', '.join(missing))
+    def quote(value: str) -> str:
+        return '{' + value.replace('}', '}}') + '}'
+    auth = os.environ.get('MSSQL_AUTHENTICATION', 'windows').lower()
+    if auth == 'sql':
+        user = os.environ.get('MSSQL_USER')
+        password = os.environ.get('MSSQL_PASSWORD')
+        if not user or not password:
+            raise RuntimeError('SQL Authentication cần MSSQL_USER và MSSQL_PASSWORD.')
+        authentication = f'UID={quote(user)};PWD={quote(password)};'
+    elif auth == 'windows':
+        authentication = 'Trusted_Connection=yes;'
+    else:
+        raise ValueError('MSSQL_AUTHENTICATION phải là sql hoặc windows.')
     return (
-        f"DRIVER={{{os.environ['MSSQL_DRIVER']}}};"
-        f"SERVER={os.environ['MSSQL_SERVER']};"
-        f"DATABASE={os.environ['MSSQL_DATABASE']};"
-        'Trusted_Connection=yes;Encrypt=yes;TrustServerCertificate=yes;'
+        f"DRIVER={quote(os.environ['MSSQL_DRIVER'])};"
+        f"SERVER={quote(os.environ['MSSQL_SERVER'])};"
+        f"DATABASE={quote(os.environ['MSSQL_DATABASE'])};"
+        + authentication + 'Encrypt=yes;TrustServerCertificate=yes;'
     )
+
 
 
 def to_database_value(value: Any) -> Any:
@@ -267,6 +281,22 @@ def export_amazon_delivery(payload: dict[str, Any]) -> pd.DataFrame:
         _insert_started_audit(cursor, payload, load_batch_id)
         connection.commit()
         audit_created = True
+
+        # Serialize staging writes against the downstream DDS build. This lock
+        # belongs to the transaction and is released by commit/rollback.
+        cursor.execute(
+            """
+            IF @@TRANCOUNT = 0 BEGIN TRANSACTION;
+            SET NOCOUNT ON;
+            DECLARE @result INT;
+            EXEC @result = sys.sp_getapplock
+                @Resource = N'amazon_delivery_staging_dds',
+                @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 0;
+            SELECT @result;
+            """
+        )
+        if cursor.fetchone()[0] < 0:
+            raise RuntimeError('Một ingestion/dbt khác đang ghi dữ liệu; chạy lại sau.')
 
         if payload.get('validation_error'):
             raise ValueError(str(payload['validation_error']))

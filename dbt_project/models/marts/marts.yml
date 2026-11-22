@@ -1,124 +1,284 @@
 version: 2
-
 models:
-  - name: delivery_rejections
-    description: Current hard validation failures, rebuilt from immutable raw data with each dbt run.
-    columns:
-      - name: staging_row_id
-        tests: [not_null]
-      - name: source_file_name
-        tests: [not_null]
-      - name: source_row_number
-        tests: [not_null]
-      - name: load_batch_id
-        tests: [not_null]
-      - name: column_name
-        tests: [not_null]
-      - name: error_code
-        tests: [not_null]
-      - name: expected_rule
-        tests: [not_null]
-
-  - name: dim_date
-    description: Calendar dimension over the configured date range with Unknown Member key 0.
-    columns:
-      - name: date_key
-        tests: [not_null, unique]
-      - name: full_date
-        tests: [unique]
-
-  - name: dim_delivery_condition
-    description: Junk dimension at one normalized Weather–Traffic combination.
-    columns:
-      - name: delivery_condition_key
-        tests: [not_null, unique]
-      - name: weather_name
-        tests: [not_null]
-      - name: traffic_level
-        tests: [not_null]
-
-  - name: dim_vehicle
-    description: Type 1 vehicle dimension with Unknown Member key 0.
-    columns:
-      - name: vehicle_key
-        tests: [not_null, unique]
-      - name: vehicle_type
-        tests: [not_null, unique]
-
-  - name: dim_area
-    description: Type 1 normalized area dimension with Unknown Member key 0.
-    columns:
-      - name: area_key
-        tests: [not_null, unique]
-      - name: area_name
-        tests: [not_null, unique]
-
-  - name: dim_category
-    description: Type 1 category dimension with Unknown Member key 0.
-    columns:
-      - name: category_key
-        tests: [not_null, unique]
-      - name: category_name
-        tests: [not_null, unique]
-
-  - name: fact_delivery
-    description: >
-      One valid source delivery record per order_id, with five Dimension foreign
-      keys and 33 logical Data Contract fields. Repeated order_id resolution
-      across future batches remains pending LOAD-01.
-    columns:
-      - name: delivery_distance_km
-        description: Calculated Haversine distance, including values above the configured analysis threshold.
-      - name: valid_distance_flag
-        description: One only when a calculable distance is at or below the configured threshold.
-      - name: distance_outlier_flag
-        description: One when the calculated distance exceeds the configured threshold.
-        tests: [not_null]
-      - name: distance_status
-        description: Explains whether the distance is valid, above the configured threshold, or not calculable.
-        tests: [not_null]
-      - name: delivery_key
-        tests: [not_null, unique]
-      - name: order_id
-        tests: [not_null, unique]
-      - name: date_key
-        tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_date')
-                field: date_key
-      - name: delivery_condition_key
-        tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_delivery_condition')
-                field: delivery_condition_key
-      - name: vehicle_key
-        tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_vehicle')
-                field: vehicle_key
-      - name: area_key
-        tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_area')
-                field: area_key
-      - name: category_key
-        tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('dim_category')
-                field: category_key
-      - name: source_file_name
-        tests: [not_null]
-      - name: load_batch_id
-        tests: [not_null]
-      - name: loaded_at
-        tests: [not_null]
+- name: delivery_rejections
+  description: Bảng 10 cột dựng lại theo trạng thái hard-rule hiện tại, một dòng/cột vi phạm của staging_row_id.
+    Đếm DISTINCT staging_row_id để đối soát với Fact; không cộng trực tiếp với Mage rejected.
+  columns:
+  - name: staging_row_id
+    tests:
+    - not_null
+    description: Định danh BIGINT IDENTITY của dòng current-state staging; ổn định khi upsert cập nhật cùng đơn.
+      Dùng nối lỗi dbt với staging, không phải ID mỗi lần chạy.
+  - name: source_file_name
+    tests:
+    - not_null
+    description: Tên tệp của lần insert đầu tiên, truyền từ staging; không tự đổi sang tệp sửa mới nhất khi upsert.
+  - name: source_row_number
+    tests:
+    - not_null
+    description: Số thứ tự bản ghi CSV (bắt đầu 1, không tính header) ở lần insert đầu; không đồng nhất số dòng
+      vật lý nếu CSV có trường nhiều dòng.
+  - name: load_batch_id
+    tests:
+    - not_null
+    description: FK/lineage tới audit.load_batch của lần insert đầu; không phải batch cập nhật gần nhất và không
+      phải run dbt hiện tại.
+  - name: column_name
+    tests:
+    - not_null
+    description: Tên cột CSV vi phạm hard rule; một staging_row_id có thể có nhiều cột lỗi.
+  - name: error_code
+    tests:
+    - not_null
+    description: Mã hard rule, ví dụ MISSING_VALUE/MISSING_ORDER_ID, INVALID_CAST, DUPLICATE_ORDER_ID, NEGATIVE_VALUE,
+      OUT_OF_RANGE; phụ thuộc cấu hình.
+  - name: expected_rule
+    tests:
+    - not_null
+    description: Mô tả điều kiện mong đợi của cột lấy từ delivery_rules.fields; optional được sửa nhãn tương ứng.
+  - name: order_id
+    description: Order_ID đã trim, giữ hoa/thường. Mage nhận diện khóa bằng trim/case-fold để upsert; Fact kiểm
+      soát duy nhất và không null. Không phải mã nhân viên hay chứng cứ giao thành công.
+  - name: loaded_at
+    description: Thời điểm insert staging lần đầu, UTC DATETIME2(3), được truyền qua dbt tới Fact; không phải thời
+      điểm build Fact/refresh Power BI.
+  - name: raw_value
+    description: 'Giá trị raw của cột lỗi chuyển sang NVARCHAR(4000) để giải thích; có thể NULL. Có thể chứa tọa
+      độ: chỉ dùng đối soát kỹ thuật, không gửi AI/public.'
+- name: dim_date
+  description: Bảng lịch theo delivery_rules.date_calendar (hiện 2022-01-01 đến 2022-12-31), thêm Unknown key 0;
+    hỗ trợ hierarchy Year/Quarter/Month/Date. Thuộc tính INT có thể do UNION/DATEPART suy ra.
+  columns:
+  - name: date_key
+    tests:
+    - not_null
+    - unique
+    description: INT YYYYMMDD; key 0 là Unknown. Fact lookup theo order_date, ngoài lịch hiện tại cũng có thể về
+      0; Active Days loại key 0.
+  - name: full_date
+    tests:
+    - unique
+    description: Ngày lịch DATE của Dimension theo khoảng cấu hình; key 0 có NULL. Không phải danh sách chỉ những
+      ngày có giao hàng.
+  - name: day_of_month
+    description: Ngày trong tháng DATEPART(day), SQL suy ra INT; NULL ở Unknown member.
+  - name: day_name
+    description: Tên thứ tiếng Anh Monday–Sunday được sinh xác định; Unknown cho key 0.
+  - name: day_of_week_number
+    description: 'Số thứ: Monday=1 đến Sunday=7, không phụ thuộc DATEFIRST; NULL ở Unknown.'
+  - name: week_of_year
+    description: Tuần ISO DATEPART(iso_week); không phải khóa tuần duy nhất giữa các năm.
+  - name: month_number
+    description: Tháng 1–12, INT do SELECT/UNION suy ra; NULL ở Unknown member.
+  - name: month_name
+    description: Nhãn Tháng 1…Tháng 12; Unknown ở key 0. Cần sort theo month_number khi hiển thị.
+  - name: quarter_number
+    description: Quý 1–4, INT; NULL ở Unknown member.
+  - name: year
+    description: Năm dương lịch DATEPART(year), INT do UNION suy ra; NULL ở Unknown member.
+- name: dim_delivery_condition
+  description: Bảng tổ hợp Weather–Traffic hiện có trong accepted, cộng Unknown/Unknown key 0. Khóa INT giữ ổn định
+    bằng dw.dim_delivery_condition_key_map; bảng semantic được dựng lại.
+  columns:
+  - name: delivery_condition_key
+    tests:
+    - not_null
+    - unique
+    description: Surrogate INT từ key-map của cặp Weather–Traffic; 0 là tổ hợp Unknown/Unknown hoặc fallback lookup,
+      không nhất thiết chỉ là lookup lỗi.
+  - name: weather_name
+    tests:
+    - not_null
+    description: Weather đã trim; ở enriched/Dimension, thiếu được gán Unknown khi trường optional. Một phần natural
+      key tổ hợp Weather–Traffic.
+  - name: traffic_level
+    tests:
+    - not_null
+    description: Traffic đã trim; ở enriched/Dimension thiếu thành Unknown khi optional; không phải trạng thái ETL.
+- name: dim_vehicle
+  description: Bảng loại phương tiện trong accepted, cộng Unknown key 0; khóa giữ bằng dw.dim_vehicle_key_map. Không
+    lưu lịch sử SCD Type 2.
+  columns:
+  - name: vehicle_key
+    tests:
+    - not_null
+    - unique
+    description: Surrogate INT từ dw.dim_vehicle_key_map; 0 Unknown; Fact quan hệ nhiều–một tới dim_vehicle.
+  - name: vehicle_type
+    tests:
+    - not_null
+    - unique
+    description: Loại phương tiện đã trim; ở enriched/Dimension thiếu thành Unknown khi optional; không tự gộp bicycle
+      vào loại khác.
+- name: dim_area
+  description: Bảng Area chuẩn hóa trong accepted, cộng Unknown key 0; khóa giữ bằng dw.dim_area_key_map. Không
+    chứa tọa độ hay lịch sử SCD Type 2.
+  columns:
+  - name: area_key
+    tests:
+    - not_null
+    - unique
+    description: Surrogate INT từ dw.dim_area_key_map; 0 Unknown; Fact lookup Area đã chuẩn hóa.
+  - name: area_name
+    tests:
+    - not_null
+    - unique
+    description: Area chuẩn hóa bằng area_aliases (Metropolitian → Metropolitan); enriched/Dimension dùng Unknown
+      cho thiếu optional.
+- name: dim_category
+  description: Bảng danh mục trong accepted, cộng Unknown key 0; khóa giữ bằng dw.dim_category_key_map, giữ Grocery
+    độc lập.
+  columns:
+  - name: category_key
+    tests:
+    - not_null
+    - unique
+    description: Surrogate INT từ dw.dim_category_key_map; 0 Unknown; không dùng tên nhóm làm khóa Fact.
+  - name: category_name
+    tests:
+    - not_null
+    - unique
+    description: Danh mục đã trim; enriched/Dimension dùng Unknown khi thiếu optional. Grocery vẫn là nhóm độc lập.
+- name: fact_delivery
+  description: Bảng 33 cột, dựng lại từ int_delivery_accepted và 5 Dimension; một dòng/order_id được chấp nhận,
+    không khẳng định giao thành công. Có 5 FK logic được dbt tests kiểm tra; lineage file/batch/time là insert staging
+    đầu, không phải dbt run mới nhất.
+  columns:
+  - name: delivery_distance_km
+    description: 'FLOAT: khoảng cách Haversine với bán kính 6371 km, không phải quãng đường giao thực. Giữ giá trị
+      >50; NULL khi không tính được hoặc store=(0,0).'
+  - name: valid_distance_flag
+    description: 'BIT: 1 khi Haversine tính được và <=50 km theo cấu hình, còn lại 0. KPI khoảng cách phải lọc cờ
+      này.'
+  - name: distance_outlier_flag
+    description: 'BIT: 1 nếu Haversine tính được >50 km, ngược lại 0; không tự loại dòng Fact.'
+    tests:
+    - not_null
+  - name: distance_status
+    description: 'Nhãn nguyên nhân/đánh giá: Valid, Outlier >50 km, Store coordinates (0,0), Not calculable; sinh
+      theo cấu hình khoảng cách.'
+    tests:
+    - not_null
+  - name: delivery_key
+    tests:
+    - not_null
+    - unique
+    description: SHA2_256 của order_id đã trim, convert CHAR(64) hex trong SQL; khác row_hash của Mage. Xác định
+      từ mã hiện hành, không tự chuẩn hóa hoa/thường trước hash.
+  - name: order_id
+    tests:
+    - not_null
+    - unique
+    description: Order_ID đã trim, giữ hoa/thường. Mage nhận diện khóa bằng trim/case-fold để upsert; Fact kiểm
+      soát duy nhất và không null. Không phải mã nhân viên hay chứng cứ giao thành công.
+  - name: date_key
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_date')
+          field: date_key
+    description: INT YYYYMMDD; key 0 là Unknown. Fact lookup theo order_date, ngoài lịch hiện tại cũng có thể về
+      0; Active Days loại key 0.
+  - name: delivery_condition_key
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_delivery_condition')
+          field: delivery_condition_key
+    description: Surrogate INT từ key-map của cặp Weather–Traffic; 0 là tổ hợp Unknown/Unknown hoặc fallback lookup,
+      không nhất thiết chỉ là lookup lỗi.
+  - name: vehicle_key
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_vehicle')
+          field: vehicle_key
+    description: Surrogate INT từ dw.dim_vehicle_key_map; 0 Unknown; Fact quan hệ nhiều–một tới dim_vehicle.
+  - name: area_key
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_area')
+          field: area_key
+    description: Surrogate INT từ dw.dim_area_key_map; 0 Unknown; Fact lookup Area đã chuẩn hóa.
+  - name: category_key
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_category')
+          field: category_key
+    description: Surrogate INT từ dw.dim_category_key_map; 0 Unknown; không dùng tên nhóm làm khóa Fact.
+  - name: source_file_name
+    tests:
+    - not_null
+    description: Tên tệp của lần insert đầu tiên, truyền từ staging; không tự đổi sang tệp sửa mới nhất khi upsert.
+  - name: load_batch_id
+    tests:
+    - not_null
+    description: FK/lineage tới audit.load_batch của lần insert đầu; không phải batch cập nhật gần nhất và không
+      phải run dbt hiện tại.
+  - name: loaded_at
+    tests:
+    - not_null
+    description: Thời điểm insert staging lần đầu, UTC DATETIME2(3), được truyền qua dbt tới Fact; không phải thời
+      điểm build Fact/refresh Power BI.
+  - name: order_time
+    description: Giờ đặt hàng TRY_CONVERT(time(0)); thiếu/không parse được là hard-rule theo cấu hình required hiện
+      tại, không thay bằng nửa đêm.
+  - name: pickup_time
+    description: Giờ pickup TRY_CONVERT(time(0)); thiếu/không parse được là hard-rule hiện tại. Pickup nhỏ hơn order
+      time được giả định sang ngày kế tiếp.
+  - name: order_hour
+    description: DATEPART(hour, order_time), kiểu INT do SQL suy ra, giá trị 0–23; NULL khi giờ thiếu ở lớp trước
+      accepted.
+  - name: time_period
+    description: 'Nhóm giờ cấu hình: Night <6, Morning <12, Afternoon <18, còn lại Evening; giờ thiếu thành Unknown
+      ở enriched.'
+  - name: agent_age
+    description: Tuổi parse bằng TRY_CONVERT(smallint); thiếu/cast lỗi/âm bị hard-rule dbt loại theo cấu hình hiện
+      tại. Tuổi 0–17 không âm vẫn giữ và gắn cờ dưới 18.
+  - name: age_group
+    description: 'Nhóm tuổi theo delivery_rules.age_groups: Under 18, 18-24, 25-34, 35-44, 45+; thiếu thành Unknown
+      ở enriched.'
+  - name: underage_agent_flag
+    description: 'BIT: 1 khi tuổi parse dưới 18, còn lại 0; thiếu tuổi không tự được coi là hợp lệ. Không loại dòng
+      chỉ vì tuổi dưới 18.'
+  - name: agent_rating_raw
+    description: Rating nguồn sau TRY_CONVERT(decimal(4,2)); có thể thiếu/ngoài miền ở lớp trước accepted. Cấu hình
+      hiện tại loại dòng thiếu hoặc ngoài [1,5] khỏi Fact; raw nguồn vẫn giữ ở staging.
+  - name: agent_rating_valid
+    description: Rating numeric thuộc [1,5], còn lại NULL ở enriched. KPI rating chỉ dùng trường này với valid_rating_flag=1.
+  - name: rating_group
+    description: Nhóm rating theo cấu hình; Unknown khi thiếu, Invalid khi ngoài miền ở enriched. Những dòng vi
+      phạm required/range hiện không vào Fact.
+  - name: valid_rating_flag
+    description: 'BIT: 1 khi rating trong [1,5], ngược lại 0; dùng lọc KPI rating, không thay thế hard-rule accepted.'
+  - name: delivery_time_minutes
+    description: Thời lượng TRY_CONVERT(decimal(10,2)); đơn vị phút là giả định của nhóm, nguồn chưa xác nhận. Required
+      và không âm theo cấu hình hiện tại; giữ IQR outlier.
+  - name: above_baseline_p90_flag
+    description: 'BIT: 1 khi thời lượng >195 phút (baseline hiện tại), 0 nếu không vượt, NULL nếu thời lượng NULL;
+      không phải SLA hoặc giao trễ.'
+  - name: delivery_time_iqr_outlier_flag
+    description: 'BIT: 1 nếu thời lượng <-15 hoặc >265 theo cấu hình hiện tại, 0 nếu trong khoảng, NULL nếu thiếu.
+      Cờ thống kê, không tự loại dòng.'
+  - name: pickup_delay_minutes
+    description: 'DECIMAL(10,2): chênh lệch giây giữa pickup và order timestamp chia 60; cộng 1 ngày khi pickup_time
+      < order_time. NULL khi thiếu đầu vào.'
+  - name: pickup_rollover_flag
+    description: 'BIT: 1 nếu pickup_time < order_time và hai giờ parse được, 0 nếu không; NULL nếu thiếu giờ. Quy
+      tắc sang ngày là giả định xử lý của nhóm.'
+  - name: distance_band
+    description: 'Nhóm Haversine theo cấu hình: [0,5), [5,10), [10,15), [15,20), [20,50] km và nhãn >50/không tính
+      được/store=(0,0). Không gộp mọi dòng không hợp lệ thành Unknown.'
+  - name: delivery_count
+    description: TINYINT hằng số 1 cho mỗi dòng; SUM trong Fact bằng số bản ghi khi grain không trùng. Không phải
+      số sản phẩm hoặc giao thành công.
+  - name: missing_operational_context_flag
+    description: 'BIT: thiếu một trong order_time, weather_name, traffic_level theo delivery_rules.operational_context_fields.
+      Không khẳng định đủ mọi trường vận hành.'

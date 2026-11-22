@@ -1,5 +1,7 @@
 # MOD-01 — Dimensional Model Design
 
+> Ghi chú metadata 22/11/2026: phần dưới là mô hình/handoff thiết kế ban đầu, không phải trạng thái triển khai hiện tại. Xem [Data Dictionary](DATA_DICTIONARY.md) và [Data Contract](DATA_CONTRACT.md) cho Fact 33 cột, current-state upsert, hard-rule rejection và Mage → dbt. Task metadata ghi nhận khác biệt, không tự phê duyệt thay đổi nghiệp vụ.
+
 ## 1. Document control
 
 | Thuộc tính | Giá trị |

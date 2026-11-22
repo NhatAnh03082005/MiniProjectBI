@@ -1,75 +1,119 @@
 version: 2
-
 sources:
-  - name: staging
-    description: >
-      Immutable raw landing table written by Mage.ai. dbt must not alter raw
-      values or use this table as a semantic-model output.
-    database: "{{ env_var('DBT_SQLSERVER_DATABASE', 'AmazonDeliveryBI') }}"
-    schema: staging
-    tables:
-      - name: raw_amazon_delivery
-        description: >
-          One physical source row plus required ingest lineage. dbt reads this
-          SQL Server table only; it does not read the CSV directly or recreate
-          the raw table.
-        meta:
-          source_grain: one physical row ingested from a source file
-          raw_behavior: immutable
-          business_key_policy: >
-            Order_ID is evaluated after staging normalization. It is not unique
-            at raw-source scope because it can recur across batches.
-        columns:
-          - name: staging_row_id
-            description: SQL Server identity primary key for the physical raw row.
-            tests:
-              - not_null
-              - unique
-          - name: Order_ID
-            description: >
-              Raw source business identifier. It remains nullable at this layer
-              to preserve malformed records, and is intentionally not tested as
-              unique or not_null here. The valid normalized Fact grain is one
-              row per order_id after the load policy is applied.
-            meta:
-              business_key: true
-              validate_after_normalization: true
-          - name: Agent_Age
-          - name: Agent_Rating
-          - name: Store_Latitude
-          - name: Store_Longitude
-          - name: Drop_Latitude
-          - name: Drop_Longitude
-          - name: Order_Date
-          - name: Order_Time
-          - name: Pickup_Time
-          - name: Weather
-          - name: Traffic
-          - name: Vehicle
-          - name: Area
-          - name: Delivery_Time
-          - name: Category
-          - name: source_file_name
-            description: File name supplied by Mage.ai for source lineage.
-            tests:
-              - not_null
-            meta:
-              lineage_field: true
-          - name: source_row_number
-            description: Physical row number supplied by Mage.ai within the source file.
-            tests:
-              - not_null
-            meta:
-              lineage_field: true
-          - name: load_batch_id
-            description: Audit batch identifier supplied by Mage.ai.
-            tests:
-              - not_null
-            meta:
-              lineage_field: true
-          - name: loaded_at
-            description: Timestamp at which Mage.ai loaded the physical raw row.
-            tests:
-              - not_null
-            meta:
-              lineage_field: true
+- name: staging
+  description: Current-state raw staging do Mage upsert theo Order_ID + row_hash; giữ nguyên 16 giá trị nguồn trong
+    phiên bản hiện hành. dbt chỉ đọc, không ghi staging.
+  database: '{{ env_var(''DBT_SQLSERVER_DATABASE'', ''AmazonDeliveryBI'') }}'
+  schema: staging
+  tables:
+  - name: raw_amazon_delivery
+    description: Một dòng hiện hành/khóa Order_ID theo chính sách Mage trim/case-fold; 26 cột gồm 16 raw, ID, lineage
+      insert và cập nhật/hash. Không phải append-only history.
+    meta:
+      source_grain: one current-state record per Mage normalized Order_ID
+      raw_behavior: current_state_upsert_preserve_raw_values
+      business_key_policy: Mage rejects invalid IDs and duplicate IDs within a batch; across batches insert/update/unchanged
+        by trim/case-fold key and raw row hash.
+    columns:
+    - name: staging_row_id
+      description: Định danh BIGINT IDENTITY của dòng current-state staging; ổn định khi upsert cập nhật cùng đơn.
+        Dùng nối lỗi dbt với staging, không phải ID mỗi lần chạy.
+      tests:
+      - not_null
+      - unique
+    - name: Order_ID
+      description: Chuỗi khóa nguồn; Mage loại null-like/quá 32 ký tự, kiểm tra trùng sau trim/case-fold trong batch
+        và upsert cùng khóa giữa các batch. DDL vẫn nullable, không đồng nghĩa pipeline chấp nhận ID rỗng.
+      meta:
+        business_key: true
+        validate_after_normalization: true
+        validation_owner: Mage technical contract; dbt hard rules
+    - name: Agent_Age
+      description: Chuỗi nguồn Agent_Age giữ nguyên, chưa trim/cast; dbt tạo agent_age. Tuổi parse bằng TRY_CONVERT(smallint);
+        thiếu/cast lỗi/âm bị hard-rule dbt loại theo cấu hình hiện tại. Tuổi 0–17 không âm vẫn giữ và gắn cờ dưới
+        18.
+    - name: Agent_Rating
+      description: Chuỗi nguồn Agent_Rating giữ nguyên, chưa trim/cast; dbt tạo agent_rating_raw. Rating nguồn sau
+        TRY_CONVERT(decimal(4,2)); có thể thiếu/ngoài miền ở lớp trước accepted. Cấu hình hiện tại loại dòng thiếu
+        hoặc ngoài [1,5] khỏi Fact; raw nguồn vẫn giữ ở staging.
+    - name: Store_Latitude
+      description: Chuỗi nguồn Store_Latitude giữ nguyên, chưa trim/cast; dbt tạo store_latitude. Vĩ độ cửa hàng
+        parse decimal(12,8), miền [-90,90]; tọa độ chỉ thuộc lớp kỹ thuật để tính Haversine.
+    - name: Store_Longitude
+      description: Chuỗi nguồn Store_Longitude giữ nguyên, chưa trim/cast; dbt tạo store_longitude. Kinh độ cửa
+        hàng parse decimal(12,8), miền [-180,180]; không đổi dấu hoặc đưa vào Fact/AI payload.
+    - name: Drop_Latitude
+      description: Chuỗi nguồn Drop_Latitude giữ nguyên, chưa trim/cast; dbt tạo drop_latitude. Vĩ độ điểm giao
+        parse decimal(12,8), miền [-90,90]; không công bố tọa độ chi tiết trên semantic model.
+    - name: Drop_Longitude
+      description: Chuỗi nguồn Drop_Longitude giữ nguyên, chưa trim/cast; dbt tạo drop_longitude. Kinh độ điểm giao
+        parse decimal(12,8), miền [-180,180]; dùng nội bộ tính Haversine.
+    - name: Order_Date
+      description: Chuỗi nguồn Order_Date giữ nguyên, chưa trim/cast; dbt tạo order_date. Ngày nghiệp vụ parse DATE
+        theo style cấu hình (23); không phải thời gian chạy ETL hoặc watermark. Mage loại ngày không parse được
+        trước staging.
+    - name: Order_Time
+      description: Chuỗi nguồn Order_Time giữ nguyên, chưa trim/cast; dbt tạo order_time. Giờ đặt hàng TRY_CONVERT(time(0));
+        thiếu/không parse được là hard-rule theo cấu hình required hiện tại, không thay bằng nửa đêm.
+    - name: Pickup_Time
+      description: Chuỗi nguồn Pickup_Time giữ nguyên, chưa trim/cast; dbt tạo pickup_time. Giờ pickup TRY_CONVERT(time(0));
+        thiếu/không parse được là hard-rule hiện tại. Pickup nhỏ hơn order time được giả định sang ngày kế tiếp.
+    - name: Weather
+      description: Chuỗi nguồn Weather giữ nguyên, chưa trim/cast; dbt tạo weather_name. Weather đã trim; ở enriched/Dimension,
+        thiếu được gán Unknown khi trường optional. Một phần natural key tổ hợp Weather–Traffic.
+    - name: Traffic
+      description: Chuỗi nguồn Traffic giữ nguyên, chưa trim/cast; dbt tạo traffic_level. Traffic đã trim; ở enriched/Dimension
+        thiếu thành Unknown khi optional; không phải trạng thái ETL.
+    - name: Vehicle
+      description: Chuỗi nguồn Vehicle giữ nguyên, chưa trim/cast; dbt tạo vehicle_type. Loại phương tiện đã trim;
+        ở enriched/Dimension thiếu thành Unknown khi optional; không tự gộp bicycle vào loại khác.
+    - name: Area
+      description: Chuỗi nguồn Area giữ nguyên, chưa trim/cast; dbt tạo area_name_raw. Area đã trim tại dbt, giữ
+        lỗi chính tả nguồn để đối soát; chuỗi nguyên trạng vẫn nằm trong staging.raw_amazon_delivery.Area.
+    - name: Delivery_Time
+      description: Chuỗi nguồn Delivery_Time giữ nguyên, chưa trim/cast; dbt tạo delivery_time_minutes. Thời lượng
+        TRY_CONVERT(decimal(10,2)); đơn vị phút là giả định của nhóm, nguồn chưa xác nhận. Required và không âm
+        theo cấu hình hiện tại; giữ IQR outlier.
+    - name: Category
+      description: Chuỗi nguồn Category giữ nguyên, chưa trim/cast; dbt tạo category_name. Danh mục đã trim; enriched/Dimension
+        dùng Unknown khi thiếu optional. Grocery vẫn là nhóm độc lập.
+    - name: source_file_name
+      description: Tên tệp của lần insert đầu tiên, truyền từ staging; không tự đổi sang tệp sửa mới nhất khi upsert.
+      tests:
+      - not_null
+      meta:
+        lineage_field: true
+    - name: source_row_number
+      description: Số thứ tự bản ghi CSV (bắt đầu 1, không tính header) ở lần insert đầu; không đồng nhất số dòng
+        vật lý nếu CSV có trường nhiều dòng.
+      tests:
+      - not_null
+      meta:
+        lineage_field: true
+    - name: load_batch_id
+      description: FK/lineage tới audit.load_batch của lần insert đầu; không phải batch cập nhật gần nhất và không
+        phải run dbt hiện tại.
+      tests:
+      - not_null
+      meta:
+        lineage_field: true
+    - name: loaded_at
+      description: Thời điểm insert staging lần đầu, UTC DATETIME2(3), được truyền qua dbt tới Fact; không phải
+        thời điểm build Fact/refresh Power BI.
+      tests:
+      - not_null
+      meta:
+        lineage_field: true
+    - name: row_hash
+      description: CHAR(64) SHA-256 của JSON 15 giá trị raw ngoài Order_ID, giữ khoảng trắng/hoa thường và thứ tự
+        HASH_COLUMNS; khác checksum tệp và delivery_key. Nullable để tương thích migration cũ.
+    - name: updated_load_batch_id
+      description: Batch gần nhất đã insert/update phiên bản hiện tại, FK audit.load_batch; insert mới cũng đặt
+        bằng load_batch_id. Unchanged không thay đổi trường này.
+    - name: updated_at
+      description: UTC DATETIME2(3) của lần ghi phiên bản hiện tại; insert cũng được khởi tạo, unchanged không đổi;
+        nullable cho dữ liệu legacy.
+    - name: updated_source_file_name
+      description: Tên tệp tạo/cập nhật phiên bản hiện hành, khác source_file_name của insert đầu.
+    - name: updated_source_row_number
+      description: Vị trí bản ghi trong tệp tạo/cập nhật phiên bản hiện hành; bắt đầu 1, bỏ header.

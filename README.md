@@ -18,6 +18,11 @@ Xây dựng hệ thống Business Intelligence tích hợp Generative AI để p
 
 ## Tài liệu hiện hành
 
+- [Data Dictionary hiện hành](project_management/DATA_DICTIONARY.md)
+- [Mapping và lineage hiện hành](project_management/SOURCE_TO_TARGET_MAPPING.md)
+- [Data Contract hiện hành](project_management/DATA_CONTRACT.md)
+- [Bàn giao metadata và giới hạn kiểm chứng](report/METADATA_AUDIT_HANDOFF.md)
+
 - [Chạy và cấu hình AI với Gemini sau khi pull source](ai/README.md): yêu cầu môi trường, DDS, nhập API key trên giao diện, demo và xử lý lỗi.
 - [Dataset Selection](project_management/DATASET_SELECTION.md)
 - [Data Profile](project_management/DATA_PROFILE_AMAZON_DELIVERY.md)
@@ -35,7 +40,7 @@ Xây dựng hệ thống Business Intelligence tích hợp Generative AI để p
 - Đúng 10 KPI chính, không có KPI tài chính và không có On-time Delivery Rate.
 - Delivery Time dùng phút theo project assumption; metadata Kaggle truy xuất được chưa xác nhận đơn vị.
 - Share Above Baseline P90 dùng ngưỡng thống kê nội bộ cố định 195 phút, không phải SLA.
-- Quality rules đã khóa cho missing, pickup rollover, rating, age, categorical values và distance.
+- Quy tắc triển khai lấy từ `dbt_project/dbt_project.yml`; khác biệt với thiết kế ban đầu về hard rejection được ghi rõ trong Data Contract/KPI Dictionary.
 
 ## Trạng thái
 
@@ -53,7 +58,7 @@ Xây dựng hệ thống Business Intelligence tích hợp Generative AI để p
 | ETL, DDS và Power BI | Có source triển khai và project Power BI; xem hướng dẫn từng thành phần |
 | AI-Assisted Analytics — mục 3.5 | Ứng dụng Gemini chạy cục bộ; xem [hướng dẫn AI](ai/README.md) |
 
-Mage ingestion đã hỗ trợ dynamic batch, raw row hash, current-state upsert và audit action counters; SQL bootstrap/migration và dbt regression được kiểm thử cục bộ. Các workstream còn lại tiếp tục theo task board và evidence tương ứng.
+Mage ingestion đã hỗ trợ dynamic batch, raw row hash, current-state upsert và audit action counters; SQL bootstrap/migration và dbt regression được kiểm thử cục bộ. Mage đã nối dbt build/đối soát DDS và audit.dbt_run; xem demo/HUONG_DAN_MAGE_DBT_DEMO.md. Task board cũ là kế hoạch lịch sử, không thay thế trạng thái kiểm chứng trong metadata handoff.
 
 ## Cấu trúc thư mục
 
