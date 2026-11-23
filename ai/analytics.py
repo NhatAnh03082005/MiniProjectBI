@@ -15,6 +15,26 @@ from .data import fingerprint_frame
 BASELINE_MINUTES = 195
 SMALL_SAMPLE = 200
 ANALYSIS_VERSION = "1.2"
+KPI_DEFINITIONS = {
+    "total_records": ("Số bản ghi giao hàng trong bộ lọc", "bản ghi"),
+    "average_minutes": ("Thời lượng giao trung bình", "phút"),
+    "median_minutes": ("Trung vị thời lượng giao", "phút"),
+    "p90_minutes": ("P90 thời lượng giao theo bộ lọc", "phút"),
+    "p95_minutes": ("P95 thời lượng giao theo bộ lọc", "phút"),
+    "above_baseline_count": ("Số bản ghi vượt baseline cố định", "bản ghi"),
+    "share_above_baseline": ("Tỷ trọng vượt baseline cố định", "%"),
+    "active_days": ("Số ngày thực sự có bản ghi", "ngày"),
+    "records_per_active_day": ("Số bản ghi bình quân trên ngày có dữ liệu", "bản ghi/ngày"),
+    "average_pickup_delay": ("Thời gian chờ pickup trung bình", "phút"),
+    "average_valid_distance": ("Khoảng cách hợp lệ trung bình", "km"),
+    "average_valid_rating": ("Rating hợp lệ trung bình", "điểm"),
+    "valid_distance_count": ("Số bản ghi có khoảng cách hợp lệ", "bản ghi"),
+    "valid_distance_coverage": ("Tỷ trọng khoảng cách hợp lệ (Operational Drivers)", "%"),
+    "report_valid_distance_coverage": ("Tỷ lệ khoảng cách hợp lệ (Area & Category)", "%"),
+    "valid_rating_coverage": ("Tỷ trọng rating hợp lệ trong Fact", "%"),
+    "pickup_delay_coverage": ("Tỷ trọng có pickup delay trong Fact", "%"),
+    "operational_context_coverage": ("Tỷ trọng đủ context vận hành trong Fact", "%"),
+}
 DIMENSIONS = {
     "traffic": ("traffic_level", "Traffic"),
     "weather": ("weather_name", "Weather"),
@@ -190,7 +210,7 @@ def _group_record(label: str, frame: pd.DataFrame) -> dict:
             "small_time_n": 0 < valid_time_count < SMALL_SAMPLE}
 
 
-def _display(value, unit: str) -> str:
+def format_fact(value, unit: str) -> str:
     if value is None:
         return "Không có dữ liệu"
     if isinstance(value, str):
@@ -214,32 +234,12 @@ def _facts(kpis: dict, tables: dict, scope: dict) -> tuple[list[dict], bool]:
             evidence_truncated = True
             return
         fact = {"id": f"F{len(facts) + 1:03d}", "label": label, "value": value, "unit": unit,
-                "display": _display(value, unit), "n": n, "source": source}
+                "display": format_fact(value, unit), "n": n, "source": source}
         if context:
             fact["context"] = context
         facts.append(fact)
 
-    labels = {
-        "total_records": ("Số bản ghi giao hàng trong bộ lọc", "bản ghi"),
-        "average_minutes": ("Thời lượng giao trung bình", "phút"),
-        "median_minutes": ("Trung vị thời lượng giao", "phút"),
-        "p90_minutes": ("P90 thời lượng giao theo bộ lọc", "phút"),
-        "p95_minutes": ("P95 thời lượng giao theo bộ lọc", "phút"),
-        "above_baseline_count": ("Số bản ghi vượt baseline cố định", "bản ghi"),
-        "share_above_baseline": ("Tỷ trọng vượt baseline cố định", "%"),
-        "active_days": ("Số ngày thực sự có bản ghi", "ngày"),
-        "records_per_active_day": ("Số bản ghi bình quân trên ngày có dữ liệu", "bản ghi/ngày"),
-        "average_pickup_delay": ("Thời gian chờ pickup trung bình", "phút"),
-        "average_valid_distance": ("Khoảng cách hợp lệ trung bình", "km"),
-        "average_valid_rating": ("Rating hợp lệ trung bình", "điểm"),
-        "valid_distance_count": ("Số bản ghi có khoảng cách hợp lệ", "bản ghi"),
-        "valid_distance_coverage": ("Tỷ trọng khoảng cách hợp lệ (Operational Drivers)", "%"),
-        "report_valid_distance_coverage": ("Tỷ lệ khoảng cách hợp lệ (Area & Category)", "%"),
-        "valid_rating_coverage": ("Tỷ trọng rating hợp lệ trong Fact", "%"),
-        "pickup_delay_coverage": ("Tỷ trọng có pickup delay trong Fact", "%"),
-        "operational_context_coverage": ("Tỷ trọng đủ context vận hành trong Fact", "%"),
-    }
-    for key, (label, unit) in labels.items():
+    for key, (label, unit) in KPI_DEFINITIONS.items():
         sample_n = scope["selected_records"]
         if key in {"average_minutes", "median_minutes", "p90_minutes", "p95_minutes", "above_baseline_count", "share_above_baseline"}:
             sample_n = kpis["valid_time_count"] or 0
@@ -298,8 +298,8 @@ def _facts(kpis: dict, tables: dict, scope: dict) -> tuple[list[dict], bool]:
                    "direction": direction}
         add(f"Mức {direction} trung bình lớn nhất giữa hai ngày lịch liền nhau đủ mẫu",
             abs(change), "phút", source="comparison/daily_average", context=context)
-        # These values need their own fact tokens: dates, means and sample
-        # sizes inside context cannot be copied as raw numbers into AI prose.
+        # These values need their own fact tokens so the local claim renderer
+        # can bind every date, mean and sample size to explicit evidence.
         for field, label, unit in (
             ("from_date", "Ngày trước trong cặp", "ngày lịch"),
             ("to_date", "Ngày sau trong cặp", "ngày lịch"),
@@ -436,7 +436,4 @@ def build_analysis(frame: pd.DataFrame, filters: FilterContext = FilterContext()
         ] + (["Danh sách chứng cứ gửi AI đã rút gọn; một số nhóm chi tiết không có trong chứng cứ. "
               "Các KPI, quy tắc, phạm vi và so sánh chính vẫn được giữ; xem bảng nhóm đầy đủ để đối chiếu."]
              if evidence_truncated else []),
-        "allowed_terms": sorted({"P90", "P95", "SLA", "DDS", "Power BI", "Unknown", "Store (0,0)",
-                                  *[r["label"] for key in DIMENSIONS for r in tables[key]],
-                                  *[r["label"] for r in tables["distance_band"]]}),
     }
