@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import date
 import copy
+from difflib import SequenceMatcher
 from itertools import combinations
 import math
 import re
@@ -12,7 +13,7 @@ from typing import Any
 
 from .analytics import BASELINE_MINUTES, KPI_DEFINITIONS, format_fact
 
-NARRATIVE_VERSION = "5"
+NARRATIVE_VERSION = "6"
 FACT_ID = re.compile(r"F[0-9]{3,5}\Z")
 TOKEN = re.compile(r"\{\{(F[0-9]{3,5})\}\}")
 RESPONSE_SCHEMA = {
@@ -48,6 +49,102 @@ def _normal(text: str) -> str:
     text = unicodedata.normalize("NFKC", text).casefold().replace("đ", "d")
     return "".join(c for c in unicodedata.normalize("NFKD", text)
                    if unicodedata.category(c) not in {"Mn", "Cf"})
+
+
+def _phrase_pattern(text: str) -> str:
+    """Match one normalized label across spaces, hyphens or punctuation."""
+    tokens = re.findall(r"[a-z0-9]+", _normal(text))
+    if not tokens:
+        return r"(?!)"
+    return r"(?<!\w)" + r"[\W_]+".join(map(re.escape, tokens)) + r"(?!\w)"
+
+
+def _damerau_distance(left: str, right: str) -> int:
+    """Optimal-string-alignment distance for short catalog labels."""
+    rows = [[0] * (len(right) + 1) for _ in range(len(left) + 1)]
+    for i in range(len(left) + 1):
+        rows[i][0] = i
+    for j in range(len(right) + 1):
+        rows[0][j] = j
+    for i in range(1, len(left) + 1):
+        for j in range(1, len(right) + 1):
+            cost = 0 if left[i - 1] == right[j - 1] else 1
+            rows[i][j] = min(
+                rows[i - 1][j] + 1,
+                rows[i][j - 1] + 1,
+                rows[i - 1][j - 1] + cost,
+            )
+            if i > 1 and j > 1 and left[i - 1] == right[j - 2] \
+                    and left[i - 2] == right[j - 1]:
+                rows[i][j] = min(rows[i][j], rows[i - 2][j - 2] + 1)
+    return rows[-1][-1]
+
+
+def _fuzzy_group(catalog: Mapping[str, dict], remaining: str,
+                 topics: set[str]) -> tuple[str, tuple[int, int]] | None:
+    """Resolve one obvious spelling error without guessing across dimensions.
+
+    Gemini still interprets unfamiliar wording.  This narrow local correction
+    exists so validation can bind an obvious misspelling such as ``motocycle``
+    to the canonical ``motorcycle`` group before the model is called. With a
+    recognised topic, labels of at least four characters are eligible.
+    Without one, only a unique long label one edit away is accepted; this lets
+    ``KPI của motocycle`` resolve safely without guessing short or ambiguous
+    names across dimensions.
+    """
+    if len(topics) > 1:
+        return None
+    topic = next(iter(topics), None)
+    labels = {
+        group
+        for claim in catalog.values()
+        if topic is None or claim["topic"] == topic
+        for group in claim["groups"]
+        if _normal(group) != "unknown"
+    }
+    candidates: list[tuple[int, float, str, tuple[int, int]]] = []
+    words = list(re.finditer(r"[a-z0-9]+", remaining))
+    for start in range(len(words)):
+        for width in range(1, min(3, len(words) - start) + 1):
+            span = (words[start].start(), words[start + width - 1].end())
+            phrase = re.sub(r"[^a-z0-9]", "", remaining[span[0]:span[1]])
+            minimum_length = 4 if topic is not None else 8
+            if len(phrase) < minimum_length:
+                continue
+            for label in labels:
+                canonical = re.sub(r"[^a-z0-9]", "", _normal(label))
+                if len(canonical) < minimum_length or phrase == canonical \
+                        or abs(len(phrase) - len(canonical)) > 2:
+                    continue
+                distance = _damerau_distance(phrase, canonical)
+                allowed_distance = (1 if topic is None or max(len(phrase), len(canonical)) <= 7 else 2)
+                score = SequenceMatcher(None, phrase, canonical, autojunk=False).ratio()
+                minimum_score = 0.88 if topic is None else 0.72
+                if distance <= allowed_distance and score >= minimum_score:
+                    candidates.append((distance, score, label, span))
+    if not candidates:
+        return None
+
+    best_by_label: dict[str, tuple[int, float, tuple[int, int]]] = {}
+    for distance, score, label, span in candidates:
+        if label not in best_by_label or (distance, -score) < (
+                best_by_label[label][0], -best_by_label[label][1]):
+            best_by_label[label] = (distance, score, span)
+    ranked = sorted(
+        ((distance, -score, label, span)
+         for label, (distance, score, span) in best_by_label.items()),
+    )
+    best_distance, negative_score, best_label, best_span = ranked[0]
+    best_score = -negative_score
+    if len(ranked) > 1:
+        second_distance, second_negative_score, _, _ = ranked[1]
+        second_score = -second_negative_score
+        ambiguity_gap = 0.12 if topic is None else 0.08
+        if second_distance == best_distance and best_score - second_score < ambiguity_gap:
+            return None
+    if best_distance == 0:
+        return None
+    return best_label, best_span
 
 
 def _number(value: Any) -> bool:
@@ -356,6 +453,11 @@ def _question_policy(catalog: dict, question: str) -> dict:
         raise GroundingError("Câu hỏi phải là văn bản không quá một nghìn ký tự.")
 
     answer_ids = [cid for cid, claim in catalog.items() if "answer" in claim["sections"]]
+    general_semantic_ids = [
+        cid for cid in answer_ids
+        if catalog[cid]["topic"] in {"overview", "kpi", "daily"}
+        or catalog[cid]["kind"] in {"comparison", "daily"}
+    ]
 
     def policy(mode: str, statuses: tuple[str, ...], *, ids=(), metrics=(), groups=(), required=(),
                required_status: str | None = None) -> dict:
@@ -377,7 +479,7 @@ def _question_policy(catalog: dict, question: str) -> dict:
         return policy("deterministic", ("insufficient_data",), required_status="insufficient_data")
 
     def semantic(*, ids=None, metrics=(), groups=()) -> dict:
-        eligible = answer_ids if ids is None else list(ids)
+        eligible = general_semantic_ids if ids is None else list(ids)
         if not eligible:
             return insufficient()
         return policy("semantic_fallback", ("answered", "insufficient_data", "unsupported_question"),
@@ -389,6 +491,13 @@ def _question_policy(catalog: dict, question: str) -> dict:
     original_question = unicodedata.normalize("NFKC", question)
     q = _normal(question)
     q = re.sub(r"(?<!\w)what(?:'|’)s(?!\w)", "what is", q)
+    q = re.sub(
+        r"(?<!\w)p([0-9o]{2})(?!\w)",
+        lambda match: ("p" + match.group(1).replace("o", "0"))
+        if match.group(1).replace("o", "0") in {"50", "90", "95"}
+        else match.group(0),
+        q,
+    )
     q = re.sub(r"(?<!\w)p\s*[-_]?\s*(50|90|95)(?!\w)", r"p\1", q)
     q = re.sub(r"(?<!\w)(50|90|95)(?:st|nd|rd|th)\s+percentile(?!\w)", r"p\1", q)
     q = re.sub(r"(?<!\w)(?:phan vi(?: thu)?|percentile)\s*(50|90|95)(?!\w)", r"p\1", q)
@@ -434,7 +543,8 @@ def _question_policy(catalog: dict, question: str) -> dict:
         "good or bad", "is it good", "is it bad", "acceptable", "okay or not", "normal",
         "reasonable", "too high", "too low", "meet target", "meet the target", "meets target",
         "within target", "concerning", "worry", "worried",
-        "khach hang", "customer", "vip", "xe o to", "o to", "automobile", "car", "truck",
+        "khach hang", "customer", "vip", "xe may", "xe o to", "o to", "automobile", "car", "truck",
+        "nguong mau nho", "minimum sample threshold", "small sample threshold",
     )
     if any(re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", q) for term in unsupported_terms):
         return unsupported()
@@ -452,15 +562,32 @@ def _question_policy(catalog: dict, question: str) -> dict:
     labels = sorted({group for claim in catalog.values() for group in claim["groups"]}, key=len, reverse=True)
     remaining = q
     raw_remaining = original_question.casefold()
+    group_aliases = {
+        "motorbike": "motorcycle",
+        "motor cycle": "motorcycle",
+        "mo to": "motorcycle",
+        "xe tay ga": "scooter",
+    }
+    for alias, label in group_aliases.items():
+        pattern = _phrase_pattern(alias)
+        if label in labels and re.search(pattern, remaining):
+            groups.add(label)
+            remaining = re.sub(pattern, " ", remaining)
     for label in labels:
         if scalar_high_low and _normal(label) in {"high", "low"}:
             continue
-        pattern = r"(?<!\w)" + re.escape(_normal(label)) + r"(?!\w)"
-        raw_pattern = r"(?<!\w)" + re.escape(unicodedata.normalize("NFKC", label).casefold()) + r"(?!\w)"
-        if re.search(raw_pattern, raw_remaining):
+        pattern = _phrase_pattern(label)
+        if re.search(pattern, remaining):
             groups.add(label)
             remaining = re.sub(pattern, " ", remaining)
-            raw_remaining = re.sub(raw_pattern, " ", raw_remaining)
+    if groups and not topics:
+        topics = {claim["topic"] for claim in catalog.values() if groups.intersection(claim["groups"])}
+    if len(groups) < 2:
+        fuzzy_group = _fuzzy_group(catalog, remaining, topics)
+        if fuzzy_group is not None:
+            label, (start, end) = fuzzy_group
+            groups.add(label)
+            remaining = remaining[:start] + " " + remaining[end:]
     if groups and not topics:
         topics = {claim["topic"] for claim in catalog.values() if groups.intersection(claim["groups"])}
     current_value_phrase = "ngay bay gio" in q
@@ -624,6 +751,32 @@ def _question_policy(catalog: dict, question: str) -> dict:
     ).split())
     words = set(re.findall(r"[a-z]+[0-9]*", numeric))
     unknown_words = words.difference(vocabulary)
+    pronoun_only = not (wanted or topics or groups or baseline_intent) and any(
+        term in q for term in ("chi so nay", "thong so nay", "con no", "what about it")
+    )
+    if pronoun_only:
+        return unsupported()
+
+    # Proper names not present in the current catalog must not silently turn
+    # into a nearby KPI or group.  Canonical and typo-corrected group labels
+    # have already been removed from ``remaining`` above.
+    unknown_proper_scope = not general_overview and any(
+        token[0].isupper() and _normal(token) in unknown_words
+        for token in re.findall(r"[^\W\d_]+", original_question, flags=re.UNICODE)
+    )
+    unresolved_topic_value = False
+    if topics and not groups and unknown_words:
+        for topic in topics.intersection(_TOPICS):
+            for alias in _TOPICS[topic][1]:
+                match = re.search(
+                    _phrase_pattern(alias) + r"\s+(?:(?:la|is)\s+)?([a-z0-9-]+)",
+                    remaining,
+                )
+                if match and match.group(1) in unknown_words:
+                    unresolved_topic_value = True
+                    break
+            if unresolved_topic_value:
+                break
 
     # Unknown locations must not disappear when Gemini interprets the rest of
     # a natural sentence. Exclusions keep ordinary time/scope phrases such as
@@ -676,6 +829,12 @@ def _question_policy(catalog: dict, question: str) -> dict:
             remaining,
         )
         or re.search(r"\bca\s+(?:sang|chieu|toi|dem)\b|\b(?:morning|afternoon|evening|night)\s+shift\b", remaining)
+        or (topics and not groups and bool(re.search(
+            r"\b(?:traffic|weather|vehicle|area|category|time period|"
+            r"giao thông|thời tiết|phương tiện|khu vực|danh mục|khung giờ)\s+"
+            r"(?:is\s+|là\s+)?[A-Z][A-Za-z-]*\b",
+            original_question,
+        )))
     )
     unresolved_preposition_scope = bool(unknown_words) and bool(
         re.search(
@@ -690,7 +849,9 @@ def _question_policy(catalog: dict, question: str) -> dict:
             remaining,
         )
     )
-    if location_scope or relative_time_scope or unresolved_entity_scope or unresolved_preposition_scope:
+    if location_scope or relative_time_scope or unresolved_entity_scope \
+            or unresolved_preposition_scope or unknown_proper_scope or unresolved_topic_value \
+            or (ranked and len(groups) == 1 and bool(unknown_words)):
         return unsupported()
     if general_overview and not (topics or groups or wanted or baseline_intent):
         ids = [cid for cid in ("overview", "distribution", "baseline", "calendar") if cid in catalog]
@@ -714,16 +875,8 @@ def _question_policy(catalog: dict, question: str) -> dict:
                           metrics=required_metrics, required=definition_ids, required_status="answered")
 
     if unknown_words:
-        safe_definition_unknown_words = {"duoi", "tail", "upper"}
-        if location_scope or relative_time_scope or unresolved_entity_scope \
-                or (ranked and len(groups) == 1) \
-                or not (wanted or topics or groups or baseline_intent) \
-                or (topics and not groups) \
-                or (wanted and not topics and not groups and (
-                    not definition_requested or not unknown_words.issubset(safe_definition_unknown_words)
-                )):
-            return unsupported()
-        candidates = answer_ids
+        has_recognised_signal = bool(wanted or topics or groups or baseline_intent)
+        candidates = answer_ids if has_recognised_signal else general_semantic_ids
         if definition_requested and wanted:
             candidates = [cid for cid in candidates if catalog[cid]["kind"] == "definition"
                           and wanted.intersection(catalog[cid]["metrics"])]
@@ -824,7 +977,11 @@ def _question_policy(catalog: dict, question: str) -> dict:
         elif any(term in q for term in ("chi so nay", "thong so nay", "con no", "what about it")):
             return unsupported()
         else:
-            return unsupported()
+            # Do not make the local recogniser a hidden whitelist.  Once the
+            # explicit safety and unsupported-scope checks above have passed,
+            # Gemini may interpret unfamiliar natural wording and choose only
+            # from the locally verified claims.
+            return semantic()
 
     ids = [cid for cid in ids if "answer" in catalog[cid]["sections"]]
     covered = {metric for cid in ids for metric in catalog[cid]["metrics"]}
