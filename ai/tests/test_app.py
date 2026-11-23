@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
+from itertools import combinations
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -11,6 +12,8 @@ from unittest.mock import patch
 import pandas as pd
 from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
 from streamlit.testing.v1 import AppTest
+
+from ai import grounding
 
 
 APP = Path(__file__).resolve().parents[1] / "app.py"
@@ -66,17 +69,42 @@ class AppLifecycleTests(unittest.TestCase):
         self.assert_clean()
 
     def response(self, **kwargs):
+        bundle = kwargs["bundle"]
         question = kwargs.get("question", "")
+        catalog = grounding.build_claim_catalog(bundle)
+        summary = [cid for cid, claim in catalog.items() if "summary" in claim["sections"]]
+        explanations = [cid for cid, claim in catalog.items() if "explanations" in claim["sections"]]
+        descriptive = [cid for cid in explanations
+                       if catalog[cid]["kind"] in {"comparison", "daily"}]
+        scope_notes = [cid for cid in explanations if catalog[cid]["kind"] == "scope_note"]
+        constraints = grounding.question_constraints(bundle, question)
+        status = constraints["required_status"]
+        if status is None:
+            status = "answered" if constraints["allowed_answer_ids"] else "insufficient_data"
         payload = {
-            "summary": [{"text": "Tập đang chọn có {{F001}}.", "evidence_ids": ["F001"]}],
-            "explanations": [{"text": "Thời lượng giao trung bình của tập đang chọn là {{F002}}.",
-                              "evidence_ids": ["F002"]}],
-            "answer": ([{"text": "Trong phạm vi đã chọn, số bản ghi là {{F001}}.", "evidence_ids": ["F001"]}]
-                       if question else []),
-            "answer_status": "answered" if question else "not_requested",
+            "snapshot_id": bundle["snapshot_id"],
+            "summary": summary[:1],
+            "explanations": (descriptive or scope_notes or explanations)[:1],
+            "answer": [],
+            "answer_status": status,
         }
+        if status == "answered":
+            allowed = list(constraints["allowed_answer_ids"])
+            for size in range(1, min(3, len(allowed)) + 1):
+                for selected in combinations(allowed, size):
+                    candidate = payload | {"answer": list(selected)}
+                    try:
+                        grounding.validate_response(candidate, bundle, question)
+                    except grounding.GroundingError:
+                        continue
+                    payload = candidate
+                    break
+                if payload["answer"]:
+                    break
+            if not payload["answer"]:
+                raise AssertionError("Fixture response cannot cover the question constraints")
         return SimpleNamespace(payload=payload, model=kwargs["model"], model_version="fixture-model-version",
-                               response_id="fixture-response", usage={"input_tokens": 10, "output_tokens": 20})
+                               response_id="fixture-response", usage={"input_tokens": 10, "output_tokens": 20}, attempts=1)
 
     def assert_clean(self):
         self.assertEqual(len(self.app.exception), 0, [e.value for e in self.app.exception])
@@ -105,6 +133,27 @@ class AppLifecycleTests(unittest.TestCase):
         self.assertEqual(self.load.call_count, 1)
         self.generate.assert_not_called()
         self.models.assert_not_called()
+
+    def test_question_text_makes_the_answer_action_primary_and_only_that_action_sends_it(self):
+        self.assertEqual(self.app.button(key="generate_summary").proto.type, "primary")
+        self.assertEqual(self.app.button(key="generate_answer").proto.type, "secondary")
+        self.load_data()
+        self.enter_key()
+        question = "  P90 là gì và giải thích rõ thông số này giúp tôi  "
+        self.app.text_area(key="ai_question").set_value(question).run()
+        self.assert_clean()
+        self.assertEqual(self.app.button(key="generate_summary").proto.type, "secondary")
+        self.assertEqual(self.app.button(key="generate_answer").proto.type, "primary")
+        self.assertFalse(self.app.button(key="generate_answer").disabled)
+        self.assertTrue(any("Hãy bấm **Giải thích câu hỏi**" in caption.value
+                            for caption in self.app.caption))
+
+        self.app.button(key="generate_summary").click().run()
+        self.assert_clean()
+        self.assertEqual(self.generate.call_args.kwargs["question"], "")
+        self.app.button(key="generate_answer").click().run()
+        self.assert_clean()
+        self.assertEqual(self.generate.call_args.kwargs["question"], question.strip())
 
     def test_api_key_is_blank_password_input_and_isolated_between_sessions(self):
         first_key = self.app.text_input(key="gemini_api_key")
@@ -214,7 +263,9 @@ class AppLifecycleTests(unittest.TestCase):
     def test_group_bar_chart_axes_match_their_actual_fields(self):
         self.load_data()
         specs = [json.loads(chart.proto.spec) for chart in self.app.get("vega_lite_chart")]
-        bar = next(spec for spec in specs if spec.get("mark", {}).get("type") == "bar")
+        bar = next(spec for spec in specs
+                   if spec.get("mark", {}).get("type") == "bar"
+                   and spec.get("encoding", {}).get("x", {}).get("field") == "average_minutes")
         self.assertEqual(bar["encoding"]["x"]["field"], "average_minutes")
         self.assertEqual(bar["encoding"]["x"]["title"], "Thời gian trung bình (phút)")
         self.assertEqual(bar["encoding"]["y"]["field"], "label")
@@ -247,7 +298,7 @@ class AppLifecycleTests(unittest.TestCase):
         self.assertTrue(len(self.app.error))
         self.assertIsNone(state(self.app, "_ai_result"))
         self.assertFalse(state(self.app, "_ai_stale"))
-        self.assertFalse(any("Phạm vi hoặc thiết lập đã thay đổi" in info.value for info in self.app.info))
+        self.assertFalse(any("Câu hỏi, phạm vi hoặc thiết lập đã thay đổi" in info.value for info in self.app.info))
 
     def test_filters_model_and_question_each_invalidate_without_auto_request(self):
         self.load_data()
@@ -344,18 +395,158 @@ class AppLifecycleTests(unittest.TestCase):
         self.assertIsNone(state(self.app, "_warehouse_frame"))
         self.assertFalse(any(FAKE_KEY in error.value or "ODBC raw" in error.value for error in self.app.error))
 
-    def test_ungrounded_model_output_is_rejected_before_render(self):
+    def test_model_prose_unknown_claim_and_old_payload_cannot_be_rendered(self):
         self.load_data()
         self.enter_key()
-        response = self.response(model="fixture-model")
-        response.payload["summary"][0]["text"] = "Có 999999 bản ghi ngoài chứng cứ."
-        self.generate.side_effect = None
-        self.generate.return_value = response
+        bad_values = [
+            "Có 44 ngày có dữ liệu và 11 ngày không có bản ghi.",
+            "CLAIM_DOES_NOT_EXIST",
+            {"text": "Có 44 ngày có dữ liệu và 11 ngày không có bản ghi.", "evidence_ids": ["F001"]},
+        ]
+        for bad in bad_values:
+            with self.subTest(bad=type(bad).__name__):
+                def malicious(**kwargs):
+                    result = self.response(**kwargs)
+                    result.payload["summary"] = [bad]
+                    return result
+
+                self.generate.side_effect = malicious
+                self.app.button(key="generate_summary").click().run()
+                self.assert_clean()
+                self.assertIsNone(state(self.app, "_ai_result"))
+                self.assertTrue(len(self.app.error))
+                self.assertFalse(any("44 ngày" in text.value or "11 ngày" in text.value for text in self.app.text))
+
+    def test_retry_progress_then_success_keeps_only_valid_catalog_claims(self):
+        self.load_data()
+        self.enter_key()
+
+        def after_retry(**kwargs):
+            kwargs["on_retry"](2, 3, "private upstream body " + FAKE_KEY)
+            result = self.response(**kwargs)
+            result.attempts = 2
+            return result
+
+        self.generate.side_effect = after_retry
+        self.generate_summary()
+        saved = state(self.app, "_ai_result")
+        self.assertEqual(saved["attempts"], 2)
+        self.assertEqual(saved["usage_scope"], "final_attempt_only")
+        self.assertEqual(saved["validation"], "claim_catalog_v2")
+        self.assertEqual(saved["narrative_version"], grounding.NARRATIVE_VERSION)
+        self.assertFalse(state(self.app, "_ai_stale"))
+        self.assertTrue(any("sau 2 lần gọi" in message.value for message in self.app.success))
+        self.assertFalse(any(FAKE_KEY in message.value for message in [*self.app.info, *self.app.success]))
+        self.assertTrue(any("Gemini lựa chọn và sắp xếp" in caption.value for caption in self.app.caption))
+        catalog = grounding.build_claim_catalog(state(self.app, "_bundle"))
+        for statement in saved["validated"]["summary"] + saved["validated"]["explanations"]:
+            self.assertEqual(statement["text"], catalog[statement["claim_id"]]["text"])
+
+    def test_final_retry_failure_keeps_data_without_fabricating_ai_result(self):
+        self.load_data()
+        self.enter_key()
+        self.generate_summary()
+        snapshot = state(self.app, "_bundle")["snapshot_id"]
+
+        def exhausted(**kwargs):
+            kwargs["on_retry"](2, 3, "temporary failure")
+            kwargs["on_retry"](3, 3, "temporary failure")
+            raise RuntimeError("private final failure " + FAKE_KEY)
+
+        self.generate.side_effect = exhausted
         self.app.button(key="generate_summary").click().run()
         self.assert_clean()
         self.assertIsNone(state(self.app, "_ai_result"))
+        self.assertEqual(state(self.app, "_bundle")["snapshot_id"], snapshot)
+        self.assertEqual(len(self.app.metric), 6)
+        self.assertTrue(len(self.app.dataframe))
         self.assertTrue(len(self.app.error))
-        self.assertFalse(any("999999" in text.value for text in self.app.text))
+        self.assertFalse(state(self.app, "_ai_stale"))
+        self.assertFalse(any(FAKE_KEY in error.value for error in self.app.error))
+        self.assertFalse(any("Gemini lựa chọn và sắp xếp" in caption.value for caption in self.app.caption))
+        self.assertFalse(any("Đang thử lại" in info.value for info in self.app.info))
+
+    def test_unsupported_financial_question_cannot_display_a_malicious_answer(self):
+        self.load_data()
+        self.enter_key()
+        self.app.text_area(key="ai_question").set_value("Dự báo doanh thu tháng sau là bao nhiêu?").run()
+        self.app.button(key="generate_answer").click().run()
+        self.assert_clean()
+        self.assertEqual(state(self.app, "_ai_result")["validated"]["answer_status"], "unsupported_question")
+        self.assertTrue(any("nằm ngoài phạm vi dữ liệu" in info.value for info in self.app.info))
+
+        def malicious(**kwargs):
+            result = self.response(**kwargs)
+            catalog = grounding.build_claim_catalog(kwargs["bundle"])
+            answer_id = next(cid for cid, claim in catalog.items() if "answer" in claim["sections"])
+            result.payload["answer_status"] = "answered"
+            result.payload["answer"] = [answer_id]
+            return result
+
+        self.generate.side_effect = malicious
+        self.app.button(key="generate_answer").click().run()
+        self.assert_clean()
+        self.assertIsNone(state(self.app, "_ai_result"))
+        self.assertTrue(len(self.app.error))
+        self.assertFalse(any(header.value == "Trả lời câu hỏi" for header in self.app.subheader))
+
+    def test_question_suggestion_fills_the_editor_without_calling_gemini(self):
+        self.load_data()
+        self.enter_key()
+        self.generate_summary()
+        calls = self.generate.call_count
+        suggestion = "P90 là gì và hiện tại bằng bao nhiêu?"
+        self.app.selectbox(key="ai_question_suggestion").set_value(suggestion).run()
+        self.assert_clean()
+        self.assertEqual(self.app.text_area(key="ai_question").value, suggestion)
+        self.assertIsNone(state(self.app, "_ai_result"))
+        self.assertEqual(self.generate.call_count, calls)
+        self.assertFalse(self.app.button(key="generate_answer").disabled)
+
+    def test_natural_p90_definition_question_returns_controlled_explanation(self):
+        self.load_data()
+        self.enter_key()
+        question = "P90 là gì và giải thích rõ thông số này giúp tôi"
+        self.app.text_area(key="ai_question").set_value(question).run()
+        self.app.button(key="generate_answer").click().run()
+        self.assert_clean()
+        saved = state(self.app, "_ai_result")
+        self.assertEqual(saved["validated"]["answer_status"], "answered")
+        answers = saved["validated"]["answer"]
+        self.assertEqual([row["claim_id"] for row in answers], ["definition/p90_minutes"])
+        self.assertIn("phân vị thứ 90", answers[0]["text"])
+        self.assertIn("không phải SLA", answers[0]["text"])
+        self.assertTrue(any(header.value == "Trả lời câu hỏi" for header in self.app.subheader))
+
+    def test_supported_question_without_filtered_evidence_has_a_distinct_message(self):
+        self.load_data()
+        self.enter_key()
+        question = "P90 mô tả phần đuôi ra sao?"
+
+        def insufficient(**kwargs):
+            result = self.response(**kwargs)
+            result.payload["answer_status"] = "insufficient_data"
+            result.payload["answer"] = []
+            return result
+
+        self.generate.side_effect = insufficient
+        self.app.text_area(key="ai_question").set_value(question).run()
+        self.app.button(key="generate_answer").click().run()
+        self.assert_clean()
+        saved = state(self.app, "_ai_result")
+        self.assertEqual(saved["validated"]["answer_status"], "insufficient_data")
+        self.assertTrue(any("phạm vi đang chọn chưa có đủ dữ liệu" in info.value for info in self.app.info))
+
+    def test_narrative_version_change_invalidates_previous_ai_without_network(self):
+        self.load_data()
+        self.enter_key()
+        self.generate_summary()
+        with patch.object(grounding, "NARRATIVE_VERSION", "new-test-version"):
+            self.app.run()
+            self.assert_clean()
+            self.assertIsNone(state(self.app, "_ai_result"))
+            self.assertTrue(any("Câu hỏi, phạm vi hoặc thiết lập đã thay đổi" in info.value for info in self.app.info))
+        self.assertEqual(self.generate.call_count, 1)
 
 
 if __name__ == "__main__":
