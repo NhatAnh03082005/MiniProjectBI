@@ -236,7 +236,7 @@ Supporting diagnostic measures: Records Missing Operational Context, Records Mis
 
 ## 10. AI contract
 
-Triển khai hiện hành của AI-01 dùng ứng dụng Streamlit và Gemini REST API; cách cài, cấu hình và kiểm chứng nằm trong [hướng dẫn AI](../ai/README.md). Các JSON bên dưới mô tả logical contract ban đầu; cấu trúc phản hồi thực tế gồm `summary`, `explanations`, `answer`, `answer_status` và dẫn chứng, được định nghĩa tại `ai/grounding.py`.
+Triển khai hiện hành của AI-01 dùng ứng dụng Streamlit và Gemini REST API; cách cài, cấu hình và kiểm chứng nằm trong [hướng dẫn AI](../ai/README.md). Các JSON bên dưới mô tả logical contract ban đầu. Phản hồi thực tế gồm `snapshot_id`, `summary`, `explanations`, `answer`, `answer_status`; ba phần nội dung chỉ chứa claim ID thuộc danh mục nhận xét đã tính, không chứa văn bản tự do. `answer_status` nhận một trong bốn giá trị: `not_requested`, `answered`, `insufficient_data` hoặc `unsupported_question`. Câu hỏi nhận diện rõ được ràng buộc bằng quy tắc xác định; cách diễn đạt an toàn nhưng lạ có thể dùng Gemini để chọn ngữ nghĩa trong tập claim đã thu hẹp. Python vẫn kiểm tra lựa chọn, chỉ số, nhóm, snapshot và dựng câu gắn với dẫn chứng; schema nằm tại `ai/grounding.py`.
 
 AI assistant chỉ nhận KPI/breakdown đã tính từ semantic/query layer được kiểm soát; không đọc raw coordinates, secret hoặc tự tạo số liệu. Logical input tối thiểu:
 
@@ -269,7 +269,7 @@ Logical output tối thiểu:
 }
 ```
 
-Giá trị trong ví dụ chỉ minh họa schema, không phải kết quả nghiệp vụ. Output phải nêu filter context, đơn vị, khoảng thời gian, sample size khi phù hợp và cảnh báo dữ liệu. AI không được khẳng định quan hệ nhân quả; gọi 195 phút là SLA; gọi record vượt 195 phút là “giao trễ”; tuyên bố dataset là dữ liệu vận hành chính thức của Amazon; hoặc nhận exact drop coordinates khi không cần thiết. AI-01 đã có Gemini REST client với key nhập theo phiên, timeout và kiểm tra chứng cứ; số liệu được tính bằng Python từ DDS, không sinh SQL bằng LLM. Chi tiết cơ chế và giới hạn được ghi trong `ai/README.md`.
+Giá trị trong ví dụ chỉ minh họa schema, không phải kết quả nghiệp vụ. Output phải nêu filter context, đơn vị, khoảng thời gian, sample size khi phù hợp và cảnh báo dữ liệu. AI không được khẳng định quan hệ nhân quả; gọi 195 phút là SLA; gọi record vượt 195 phút là “giao trễ”; tuyên bố dataset là dữ liệu vận hành chính thức của Amazon; hoặc nhận exact drop coordinates khi không cần thiết. AI-01 dùng key nhập trên giao diện, timeout, tối đa ba lần gọi có giới hạn và kiểm tra claim trước khi hiển thị; không tự đổi model hoặc giả lập kết quả AI khi dịch vụ lỗi. Số liệu được tính bằng Python từ DDS, không sinh SQL bằng LLM. Chi tiết cơ chế và giới hạn được ghi trong `ai/README.md`.
 
 ## 11. Data quality checklist
 
