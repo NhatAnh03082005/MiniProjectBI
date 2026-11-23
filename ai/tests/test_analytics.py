@@ -96,7 +96,6 @@ class AnalyticsTests(unittest.TestCase):
         self.assertEqual(result["kpis"]["average_valid_distance"], 5)
         distance_fact = next(f for f in result["facts"] if f["source"] == "kpi/average_valid_distance")
         self.assertEqual(distance_fact["n"], 1)
-        self.assertIn("[5,10) km", result["allowed_terms"])
         self.assertEqual(result["kpis"]["valid_distance_count"], 1)
         self.assertAlmostEqual(result["kpis"]["valid_distance_coverage"], 1/3)
         self.assertEqual(len(result["tables"]["distance_band"]), 1)
@@ -186,16 +185,10 @@ class AnalyticsTests(unittest.TestCase):
             self.assertEqual(fact["context"]["direction"], "tăng")
         self.assertEqual(daily_facts[prefix]["context"]["from_n"], 200)
         self.assertEqual(result["tables"]["daily"][0]["n"], 210)
-        # The exact dates and means must be usable without bypassing the
-        # numeric guard or copying a number from unstructured context.
+        # The exact dates and means must survive the vetted-claim protocol.
         from ai.grounding import validate_response
-        refs = [daily_facts[prefix + "/" + suffix]["id"]
-                for suffix in ("from_date", "to_date", "from_average", "to_average")]
-        text = ("Thời lượng giao trung bình từ ngày {{" + refs[0] + "}} đến ngày {{" + refs[1]
-                + "}} thay đổi từ {{" + refs[2] + "}} thành {{" + refs[3] + "}}.")
-        payload = {"summary": [{"text": text, "evidence_ids": refs}],
-                   "explanations": [{"text": text, "evidence_ids": refs}],
-                   "answer": [], "answer_status": "not_requested"}
+        payload = {"snapshot_id": result["snapshot_id"], "summary": ["overview"],
+                   "explanations": ["daily/increase"], "answer": [], "answer_status": "not_requested"}
         rendered = validate_response(payload, result)["explanations"][0]["text"]
         self.assertIn("2022-03-01", rendered)
         self.assertIn("2022-03-02", rendered)

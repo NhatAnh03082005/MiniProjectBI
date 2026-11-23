@@ -114,8 +114,10 @@ staging_rows = fact_rows + COUNT(DISTINCT delivery_rejections.staging_row_id)
 - Import cần Refresh sau DDS cập nhật. AI ứng dụng đọc DDS riêng, không lấy trực tiếp filter context trong Power BI.
 - KPI count hiện SUM(delivery_count); mean/median/percentile/rate phải tính lại trên accepted Fact theo filter, không cộng trung bình giữa các nhóm.
 - Đơn vị phút là giả định; không có SLA, doanh thu, chi phí, Agent_ID. Không gọi vượt baseline là giao trễ hoặc kết luận quan hệ nhân quả.
-- AI Python tính aggregates/breakdowns/evidence, Gemini tạo summary/explanations và hỏi đáp dựa trên chứng cứ; không sinh SQL tự do. Key nhập theo hướng dẫn AI, không thuộc dictionary/log.
-- Payload LLM không chứa ID bản ghi/tọa độ chi tiết; bảng rejection.raw_value có thể chứa tọa độ nên chỉ đối soát kỹ thuật.
+- Chế độ **Phân tích dữ liệu** dùng Python để tính aggregates, breakdowns, evidence và danh mục nhận xét. Gemini chỉ chọn claim ID; phản hồi có `snapshot_id`, `summary`, `explanations`, `answer`, `answer_status`. Python kiểm tra snapshot, chỉ số, nhóm và trạng thái trước khi dựng câu; không sinh SQL tự do.
+- Chế độ **Hỏi Gemini chung** chỉ gửi nội dung câu hỏi, không gửi DDS, bộ lọc, SQL hoặc bundle phân tích. Kết quả được ghi rõ là kiến thức chung, không có số liệu đối chiếu và không dùng làm bằng chứng đáp ứng mục 3.5.
+- Gemini key được nhập trên giao diện. Mỗi yêu cầu có timeout và tối đa ba lần gọi có giới hạn; ứng dụng không tự đổi model hoặc tạo kết quả AI giả khi dịch vụ lỗi.
+- Payload phân tích dữ liệu không chứa ID bản ghi/tọa độ chi tiết; bảng rejection.raw_value có thể chứa tọa độ nên chỉ đối soát kỹ thuật.
 - Tên key JSON/phản hồi thực tế: xem ai/analytics.py, ai/grounding.py và ai/README.md, không dùng ví dụ logical schema cũ thay runtime schema.
 
 ## 9. Tiêu chí đối chiếu metadata
