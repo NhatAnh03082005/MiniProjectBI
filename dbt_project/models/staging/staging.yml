@@ -1,50 +1,77 @@
 version: 2
-
 models:
-  - name: stg_amazon_delivery
-    description: >
-      Normalized staging layer. It retains one row per raw staging record and
-      does not join dimensions or discard records because of missing values.
-    columns:
-      - name: staging_row_id
-        description: Physical raw-row identifier retained for lineage.
-        tests:
-          - not_null
-          - unique
-      - name: order_id
-        description: Trimmed source identifier. Validation for Fact grain occurs downstream.
-      - name: agent_age
-        description: Agent age parsed with TRY_CONVERT; invalid or missing values remain null.
-      - name: agent_rating_raw
-        description: Parsed raw rating, retaining values outside the analysis-valid range.
-      - name: store_latitude
-      - name: store_longitude
-      - name: drop_latitude
-      - name: drop_longitude
-      - name: order_date
-      - name: order_time
-        description: Parsed order time; missing values remain null.
-      - name: pickup_time
-        description: Parsed pickup time; missing values remain null.
-      - name: weather_name
-      - name: traffic_level
-      - name: vehicle_type
-      - name: area_name_raw
-        description: Trimmed source area, retained for technical lineage.
-      - name: area_name
-        description: Area normalized using the configured area_aliases mapping.
-      - name: delivery_time_minutes
-        description: Parsed delivery duration; no outlier is removed at staging.
-      - name: category_name
-      - name: source_file_name
-        tests:
-          - not_null
-      - name: source_row_number
-        tests:
-          - not_null
-      - name: load_batch_id
-        tests:
-          - not_null
-      - name: loaded_at
-        tests:
-          - not_null
+- name: stg_amazon_delivery
+  description: 'Chuẩn hóa một dòng cho mỗi current-state staging_row_id: trim/null normalization/TRY_CONVERT/Area
+    alias. Không tự loại dòng; hard rules ở int_delivery_validation_errors. View trong schema của target (runner
+    dùng dw).'
+  columns:
+  - name: staging_row_id
+    description: Định danh BIGINT IDENTITY của dòng current-state staging; ổn định khi upsert cập nhật cùng đơn.
+      Dùng nối lỗi dbt với staging, không phải ID mỗi lần chạy.
+    tests:
+    - not_null
+    - unique
+  - name: order_id
+    description: Order_ID đã trim, giữ hoa/thường. Mage nhận diện khóa bằng trim/case-fold để upsert; Fact kiểm
+      soát duy nhất và không null. Không phải mã nhân viên hay chứng cứ giao thành công.
+  - name: agent_age
+    description: Tuổi parse bằng TRY_CONVERT(smallint); thiếu/cast lỗi/âm bị hard-rule dbt loại theo cấu hình hiện
+      tại. Tuổi 0–17 không âm vẫn giữ và gắn cờ dưới 18.
+  - name: agent_rating_raw
+    description: Rating nguồn sau TRY_CONVERT(decimal(4,2)); có thể thiếu/ngoài miền ở lớp trước accepted. Cấu hình
+      hiện tại loại dòng thiếu hoặc ngoài [1,5] khỏi Fact; raw nguồn vẫn giữ ở staging.
+  - name: store_latitude
+    description: Vĩ độ cửa hàng parse decimal(12,8), miền [-90,90]; tọa độ chỉ thuộc lớp kỹ thuật để tính Haversine.
+  - name: store_longitude
+    description: Kinh độ cửa hàng parse decimal(12,8), miền [-180,180]; không đổi dấu hoặc đưa vào Fact/AI payload.
+  - name: drop_latitude
+    description: Vĩ độ điểm giao parse decimal(12,8), miền [-90,90]; không công bố tọa độ chi tiết trên semantic
+      model.
+  - name: drop_longitude
+    description: Kinh độ điểm giao parse decimal(12,8), miền [-180,180]; dùng nội bộ tính Haversine.
+  - name: order_date
+    description: Ngày nghiệp vụ parse DATE theo style cấu hình (23); không phải thời gian chạy ETL hoặc watermark.
+      Mage loại ngày không parse được trước staging.
+  - name: order_time
+    description: Giờ đặt hàng TRY_CONVERT(time(0)); thiếu/không parse được là hard-rule theo cấu hình required hiện
+      tại, không thay bằng nửa đêm.
+  - name: pickup_time
+    description: Giờ pickup TRY_CONVERT(time(0)); thiếu/không parse được là hard-rule hiện tại. Pickup nhỏ hơn order
+      time được giả định sang ngày kế tiếp.
+  - name: weather_name
+    description: Weather đã trim; ở enriched/Dimension, thiếu được gán Unknown khi trường optional. Một phần natural
+      key tổ hợp Weather–Traffic.
+  - name: traffic_level
+    description: Traffic đã trim; ở enriched/Dimension thiếu thành Unknown khi optional; không phải trạng thái ETL.
+  - name: vehicle_type
+    description: Loại phương tiện đã trim; ở enriched/Dimension thiếu thành Unknown khi optional; không tự gộp bicycle
+      vào loại khác.
+  - name: area_name_raw
+    description: Area đã trim tại dbt, giữ lỗi chính tả nguồn để đối soát; chuỗi nguyên trạng vẫn nằm trong staging.raw_amazon_delivery.Area.
+  - name: area_name
+    description: Area chuẩn hóa bằng area_aliases (Metropolitian → Metropolitan); enriched/Dimension dùng Unknown
+      cho thiếu optional.
+  - name: delivery_time_minutes
+    description: Thời lượng TRY_CONVERT(decimal(10,2)); đơn vị phút là giả định của nhóm, nguồn chưa xác nhận. Required
+      và không âm theo cấu hình hiện tại; giữ IQR outlier.
+  - name: category_name
+    description: Danh mục đã trim; enriched/Dimension dùng Unknown khi thiếu optional. Grocery vẫn là nhóm độc lập.
+  - name: source_file_name
+    tests:
+    - not_null
+    description: Tên tệp của lần insert đầu tiên, truyền từ staging; không tự đổi sang tệp sửa mới nhất khi upsert.
+  - name: source_row_number
+    tests:
+    - not_null
+    description: Số thứ tự bản ghi CSV (bắt đầu 1, không tính header) ở lần insert đầu; không đồng nhất số dòng
+      vật lý nếu CSV có trường nhiều dòng.
+  - name: load_batch_id
+    tests:
+    - not_null
+    description: FK/lineage tới audit.load_batch của lần insert đầu; không phải batch cập nhật gần nhất và không
+      phải run dbt hiện tại.
+  - name: loaded_at
+    tests:
+    - not_null
+    description: Thời điểm insert staging lần đầu, UTC DATETIME2(3), được truyền qua dbt tới Fact; không phải thời
+      điểm build Fact/refresh Power BI.

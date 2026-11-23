@@ -1,5 +1,7 @@
 # Team Handoff Guide — Business Baseline hiện hành
 
+> Ghi chú metadata 22/11/2026: phần dưới là mô hình/handoff thiết kế ban đầu, không phải trạng thái triển khai hiện tại. Xem [Data Dictionary](DATA_DICTIONARY.md) và [Data Contract](DATA_CONTRACT.md) cho Fact 33 cột, current-state upsert, hard-rule rejection và Mage → dbt. Task metadata ghi nhận khác biệt, không tự phê duyệt thay đổi nghiệp vụ.
+
 ## 1. Project Overview
 
 Project xây dựng hệ thống Business Intelligence tích hợp Generative AI để phân tích hiệu suất giao hàng chặng cuối. Kiến trúc dự kiến: `Kaggle CSV → Mage.ai → SQL Server staging → dbt → SQL Server dw → Power BI → Generative AI`; chưa có thành phần kỹ thuật nào được triển khai.

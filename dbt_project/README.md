@@ -2,17 +2,17 @@
 
 ## Vai trò
 
-dbt biến đổi dữ liệu từ raw staging SQL Server sang mô hình ngôi sao phục vụ Power BI. dbt không đọc CSV trực tiếp, không nạp dữ liệu bằng Mage.ai và không tạo lại raw staging. Raw giữ bất biến; chuẩn hóa, chuyển kiểu, trường dẫn xuất, Dimension và Fact được xử lý từ dbt.
+dbt biến đổi dữ liệu từ raw staging SQL Server sang mô hình ngôi sao phục vụ Power BI. dbt không đọc CSV trực tiếp, không nạp dữ liệu bằng Mage.ai và không tạo lại raw staging. Raw là current-state upsert, giữ nguyên chuỗi của phiên bản hiện hành; chuẩn hóa, chuyển kiểu, trường dẫn xuất, Dimension và Fact được xử lý từ dbt.
 
 ## Source
 
 Source duy nhất của project là:
 
 ```text
-AmazonDeliveryBI.staging.raw_amazon_delivery
+<database target>.staging.raw_amazon_delivery
 ```
 
-Source có 21 cột: `staging_row_id`, 16 trường raw của CSV và bốn trường lineage (`source_file_name`, `source_row_number`, `load_batch_id`, `loaded_at`). Định nghĩa source nằm tại `models/sources/sources.yml`.
+Source có 26 cột: `staging_row_id`, 16 trường raw, bốn trường insert-lineage (`source_file_name`, `source_row_number`, `load_batch_id`, `loaded_at`) và năm trường hash/update (`row_hash`, `updated_load_batch_id`, `updated_at`, `updated_source_file_name`, `updated_source_row_number`). Định nghĩa source nằm tại `models/sources/sources.yml`.
 
 ## Cấu trúc và lineage
 
@@ -151,13 +151,23 @@ dbt build
 
 Dependencies được pin tại `requirements.txt`. Không commit `.python312/`, `.venv/`, `target/`, `logs/`, `.user.yml`, `profiles.yml` hoặc `dbt_packages/`.
 
-## Validation status
+## Validation status — bằng chứng runtime có trước task metadata
 
 Logic xử lý lỗi, cột phân loại tùy chọn và khoảng cách đã qua `dbt build` trên SQL Server local sau khi chuyển quy tắc vào `vars.delivery_rules`. Build chạy một hook kiểm tra cấu hình, 7 table models, 4 view models, 79 data tests và đạt `PASS=90, WARN=1, ERROR=0`. Cảnh báo `warn_rejected_delivery_rows` ghi `Got 145 results`; mỗi kết quả là một `staging_row_id` bị loại, không phải một cột lỗi. Đối soát: 43.739 dòng raw = 43.594 dòng Fact + 145 dòng bị loại riêng biệt. Trong Fact, 39.958 dòng có khoảng cách không quá 50 km, 151 dòng có khoảng cách trên 50 km được giữ giá trị và gắn cờ, 3.485 dòng có tọa độ Store `(0,0)` nên không thể tính khoảng cách đáng tin cậy. Bảng lỗi có 54 lỗi rating thiếu, 91 lỗi giờ đặt thiếu và 53 lỗi rating ngoài 1–5. Weather, Traffic, Vehicle, Area và Category thiếu không tự chặn DDS; dữ liệu mẫu hiện không có dòng nào thiếu Vehicle, Area hoặc Category nên ba nhóm Unknown này chưa có trường hợp thực tế để đối soát. Cả 91 dòng thiếu Weather/Traffic hiện cũng thiếu `Order_Time`, nên số dòng Fact chưa đổi. Đã compile thử với ngưỡng khoảng cách 40 km và Weather bắt buộc qua `--vars` để xác nhận model/test sinh SQL theo cấu hình, rồi trả lại cấu hình mặc định. Log cũ trong `evidence/final_etl/` có trước thay đổi này và không đại diện cho build mới.
 
 ## TODO và quyết định cần chốt
 
-1. `LOAD-01` phải chốt duplicate/rerun policy khi `order_id` lặp giữa batch. Hiện tất cả dòng có `order_id` trùng sau trim đều bị loại, không tự chọn bản ghi để giữ.
+1. Mage đã chốt upsert/rerun giữa batch bằng Order_ID + row_hash; duplicate trong cùng batch fail cả batch. dbt duplicate hard-rule còn bảo vệ trường hợp dữ liệu staging bị nạp ngoài Mage; không tự chọn một dòng tùy ý. CTE mang tên deduplication_pending trong SQL là pass-through/comment lịch sử, không phải policy còn chờ triển khai.
 2. Trưởng nhóm xác nhận quyền dbt `CREATE TABLE`, `INSERT`, `MERGE` và `IDENTITY_INSERT` trong schema `dw` cho key-map technical tables.
 3. Tài liệu chưa chốt range nghiệp vụ min/max cho `agent_age`; code chỉ reject tuổi âm và vẫn giữ tuổi 15/50.
-4. Các boundary group và physical implementation được ghi Proposed trong MAP-01/Data Contract cần được trưởng nhóm xác nhận trước khi dùng làm chuẩn integration chính thức.
+4. Dictionary/mapping/contract hiện mô tả boundary và cấu trúc theo code. Nhóm vẫn cần xác nhận khác biệt required/rating so với baseline thiết kế; task metadata không tự phê duyệt thay đổi nghiệp vụ.
+
+
+## Metadata hiện hành (22/11/2026)
+
+Xem [Data Dictionary](../project_management/DATA_DICTIONARY.md), [mapping](../project_management/SOURCE_TO_TARGET_MAPPING.md) và [hướng dẫn tạo docs](../report/METADATA_AUDIT_HANDOFF.md).
+
+- 11 models: 4 view và 7 table, Fact 33 cột, 5 Dimension; các key-map kỹ thuật do pre-hook quản lý, không phải model phân tích mới.
+- Fact và rejection được dựng lại từ current state; audit.dbt_run/result_summary lưu snapshot mỗi attempt. Lineage Fact là insert staging đầu, không phải thời gian build DDS.
+- Required hiện tại gồm giờ/rating: khác thiết kế ban đầu giữ missing; không dùng số profiling nguồn làm kỳ vọng KPI Fact.
+- Task metadata chỉ thay descriptions/meta, giữ nguyên tests, model SQL, rule và cấu hình materialization. Extended properties trong database chưa cập nhật cho đến khi chủ động chạy quy trình dbt thích hợp; sửa YAML không tự ghi metadata xuống SQL Server.

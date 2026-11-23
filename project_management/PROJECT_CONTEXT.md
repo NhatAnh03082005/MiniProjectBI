@@ -41,14 +41,12 @@
 - Relationships là Dimension 1 → Fact nhiều, filter một chiều.
 - Không tạo `dim_agent`, `dim_time` hoặc Location Dimension từ exact coordinates.
 
-## Nội dung chưa chốt
+## Trạng thái triển khai hiện hành — 22/11/2026
 
-- Star Schema diagram chi tiết và Source-to-Target Mapping.
-- Kiểu dữ liệu vật lý cuối cùng và thuật toán technical key.
-- Batch, watermark, idempotency và rerun design chính thức.
-- Kiến trúc triển khai và phương án chia sẻ SQL Server.
-- Dashboard, AI Summary và LLM provider.
-
-## Trạng thái triển khai
-
-Task 1–6, Handoff và `MOD-01` đã hoàn thành. Task tiếp theo là `MOD-02`. Logical model đã được duyệt nhưng chưa có Fact/Dimension vật lý, Star Schema diagram, pipeline, SQL, dbt model, Power BI hoặc AI component được triển khai.
+- Có Mage full/incremental current-state upsert theo Order_ID + row_hash, không thêm LSET/CET.
+- Cả hai pipeline nối Verify → dbt build (models/tests) → đối soát DDS; auth SQL/Windows theo cấu hình chung.
+- Có staging/audit.load_batch và audit.dbt_run; nguồn và phạm vi audit được mô tả trong Data Dictionary, chưa bao phủ mọi lỗi trước exporter.
+- dbt có 11 model, 5 Dimension và Fact 33 cột; key-map giữ surrogate keys qua rebuild. Required/range hiện khác một số giả định missing ban đầu.
+- Có 4 trang Power BI nghiệp vụ và ứng dụng AI Gemini; trang giám sát/lập lịch là hạng mục riêng, không tự đánh dấu hoàn tất trong task metadata.
+- Đã có ảnh kết quả demo do người dùng chạy, không đồng nghĩa task metadata vừa chạy lại hệ thống.
+- [Data Dictionary](DATA_DICTIONARY.md), [mapping](SOURCE_TO_TARGET_MAPPING.md), [Data Contract](DATA_CONTRACT.md) và [metadata handoff](../report/METADATA_AUDIT_HANDOFF.md) mô tả triển khai hiện hành. Task board/thiết kế ban đầu giữ làm lịch sử kế hoạch.
