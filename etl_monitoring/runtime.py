@@ -15,9 +15,10 @@ def enabled():
 
 def connect(autocommit=True):
     """Explicit new environment uses adapter guard; old manual TEST stays compatible."""
-    if os.environ.get('ETL_MONITORING_ENV') == 'DEMO':
-        from etl_monitoring.pipeline_bridge import DemoSettings
-        return DemoSettings().connect(autocommit=autocommit)
+    if (os.environ.get('ETL_MONITORING_ENV') == 'DEMO' or
+            os.environ.get('ETL_MONITORING_INTEGRATED') == '1'):
+        from etl_monitoring.pipeline_bridge import PipelineSettings
+        return PipelineSettings().connect(autocommit=autocommit)
     if os.environ.get('ETL_MONITORING_ENV'):
         from etl_monitoring.adapter import Settings
         return Settings.from_env().connect(autocommit=autocommit)

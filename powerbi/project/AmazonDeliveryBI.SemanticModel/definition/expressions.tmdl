@@ -1,5 +1,14 @@
 expression 'ETL Monitoring Server' = "NHAT-ANH\SQLEXPRESS" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
 	lineageTag: 555656be-0cc5-46e8-922a-dc89f12eac2f
 
-expression 'ETL Monitoring Database' = "AmazonDeliveryBI_Demo" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Text
+
+expression 'ETL Monitoring Database' = "AmazonDeliveryBI" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
 	lineageTag: ec11931c-6848-4acd-b2b0-14bec525eac7
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Text
+

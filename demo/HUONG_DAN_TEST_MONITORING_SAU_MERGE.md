@@ -1,5 +1,9 @@
 # Test tay sau khi tích hợp ETL Monitoring
 
+> Cập nhật: đã gộp staging/audit, audit.dbt_run và Monitoring vào `sql/run_sql_skeleton.sql` (database chính) và `sql/run_sql_skeleton_demo.sql` (Demo). Chọn đúng một file tổng hợp, chạy trong SSMS thay cho ba file Monitoring riêng. Không cần SQLCMD Mode. Fact/Dimension vẫn do dbt build trong pipeline tạo/cập nhật. Không reset dữ liệu.
+
+> Đây là hướng dẫn cho DEMO. Đã bổ sung hỗ trợ database chính theo yêu cầu chủ dự án; xem HUONG_DAN_MONITORING_DATABASE_CHINH.md trong cùng thư mục. Các câu DEMO-only dưới đây mô tả phiên bản bàn giao ban đầu.
+
 ## Phạm vi bản tích hợp
 
 - Giữ pipeline main 5 block, shared SQL/Windows auth, upsert Order_ID + row_hash, application lock, dbt runner và audit hiện có.

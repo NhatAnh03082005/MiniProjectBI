@@ -1,0 +1,14 @@
+﻿Order_ID,Agent_Age,Agent_Rating,Store_Latitude,Store_Longitude,Drop_Latitude,Drop_Longitude,Order_Date,Order_Time,Pickup_Time,Weather,Traffic,Vehicle,Area,Delivery_Time,Category
+demo700000001,29,4.7,13.02978,80.208812,13.10978,80.288812,2022-8-3,20:00:00,20:10:00,Sunny,Jam ,van,Metropolitian ,140,Apparel
+demo700000002,32,4.6,21.186438,72.794115,21.226438,72.834115,2026-11-13,15:30:00,15:45:00,Fog,Medium ,scooter ,Metropolitian ,90,Outdoors
+asis944862845,26,4.3,15.51315,73.78346,15.56315,73.83346,2022-2-11,23:25:00,23:35:00,Sandstorms,Low ,motorcycle ,Urban ,110,Jewelry
+xzkg140273315,38,4.9,15.561295,73.749478,15.601295,73.789478,2022-2-11,13:35:00,13:40:00,Cloudy,High ,scooter ,Urban ,125,Shoes
+demo700000003,30,4.5,22.310237,73.158921,22.390237,73.238921,2022-02-30,19:55:00,20:10:00,Stormy,Jam ,van,Metropolitian ,160,Apparel
+,30,4.5,22.310237,73.158921,22.390237,73.238921,2022-02-30,19:55:00,20:10:00,Stormy,Jam ,van,Metropolitian ,160,Apparel
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,

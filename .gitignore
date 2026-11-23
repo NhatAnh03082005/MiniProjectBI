@@ -56,6 +56,8 @@ junit*.xml
 dbt_project/target/
 dbt_project/logs/
 dbt_project/dbt_packages/
+dbt_project/dbt_build_latest.txt
+dbt_project/.user.yml
 **/target/
 
 # Mage runtime and temporary artifacts

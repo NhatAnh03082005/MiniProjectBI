@@ -136,9 +136,12 @@ table 'ETL Record Metrics'
 				let
 				    Source = Sql.Database(#"ETL Monitoring Server", #"ETL Monitoring Database", [CreateNavigationProperties=false]),
 				    Identity = Value.NativeQuery(Source, "SELECT DB_NAME() AS db_name, CONVERT(nvarchar(128), SERVERPROPERTY('ServerName')) AS server_name, (SELECT CONVERT(nvarchar(128),value) FROM sys.extended_properties WHERE class=0 AND name='ETLMonitoring.Environment') AS environment"),
-				    Guarded = if Identity{0}[db_name] = "AmazonDeliveryBI_Demo" and Identity{0}[environment] = "APPROVED_DEMO" then Source else error "ETL Monitoring requires the configured DEMO target and APPROVED_DEMO marker",
+				    Guarded = if ((#"ETL Monitoring Database" = "AmazonDeliveryBI" and Identity{0}[db_name] = "AmazonDeliveryBI" and Identity{0}[environment] = "APPROVED_PRIMARY") or (#"ETL Monitoring Database" = "AmazonDeliveryBI_Demo" and Identity{0}[db_name] = "AmazonDeliveryBI_Demo" and Identity{0}[environment] = "APPROVED_DEMO")) then Source else error "ETL Monitoring requires the configured target and matching approved environment marker",
 				    View = Guarded{[Schema="monitoring", Item="vw_etl_record_metrics"]}[Data]
 				in
 				    View
 
-	annotation PBI_ResultType = Table
+	annotation PBI_ResultType = Exception
+
+	annotation PBI_NavigationStepName = Navigation
+

@@ -43,13 +43,13 @@ blocks:
   language: python
   name: export_incremental_amazon_delivery
   retry_config: null
-  status: executed
+  status: failed
   timeout: null
   type: data_exporter
   upstream_blocks:
   - validate_incremental_amazon_delivery
   uuid: export_incremental_amazon_delivery
-- all_upstream_blocks_executed: true
+- all_upstream_blocks_executed: false
   color: null
   configuration: {}
   downstream_blocks:
@@ -66,7 +66,7 @@ blocks:
   upstream_blocks:
   - export_incremental_amazon_delivery
   uuid: verify_amazon_delivery_batch
-- all_upstream_blocks_executed: true
+- all_upstream_blocks_executed: false
   color: null
   configuration: {}
   downstream_blocks: []
@@ -106,6 +106,6 @@ tags:
 type: python
 uuid: amazon_delivery_incremental_load
 variables:
-  source_file_path: demo/etl_batches/05_rerun.csv
+  source_file_path: data/raw/amazon_delivery.csv
 variables_dir: C:\Users\PC\.mage_data\mage_project
 widgets: []

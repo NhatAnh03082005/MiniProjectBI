@@ -4,7 +4,7 @@
     {
       "ordinal": 0,
       "scrollPosition": {
-        "x": 0,
+        "x": 1767.1764739549483,
         "y": 240.25057803012893
       },
       "nodes": [
@@ -142,6 +142,19 @@
           "nodeLineageTag": "d6d9b3bf-37f3-40d0-81f6-2fb931fbeecd",
           "size": {
             "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 2759.8985709823364,
+            "y": 495.6280826929036
+          },
+          "nodeIndex": "ETL Refresh Info",
+          "nodeLineageTag": "33813d5e-2ee8-478b-9b43-108e9c8742db",
+          "size": {
+            "height": 128,
             "width": 234
           },
           "zIndex": 0

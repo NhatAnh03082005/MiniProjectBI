@@ -1,13 +1,13 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
-  "name": "65890f90c43449d79ba0",
+  "name": "fc71b80a150e120d797d",
   "position": {
-    "x": 24,
-    "y": 690,
-    "z": 17000,
-    "width": 246,
-    "height": 100,
-    "tabOrder": 17000
+    "x": 861.25930626853574,
+    "y": 172.31273794416254,
+    "z": 18000,
+    "height": 104.96033512239822,
+    "width": 220,
+    "tabOrder": 18000
   },
   "visual": {
     "visualType": "cardVisual",
@@ -23,14 +23,32 @@
                       "Entity": "ETL Runs"
                     }
                   },
-                  "Property": "Latest Execution Label"
+                  "Property": "Successful Runs"
                 }
               },
-              "queryRef": "ETL Runs.Latest Execution Label",
-              "nativeQueryRef": "Latest Execution Label"
+              "queryRef": "ETL Runs.Successful Runs",
+              "nativeQueryRef": "Successful Runs"
             }
           ]
         }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "ETL Runs"
+                  }
+                },
+                "Property": "Successful Runs"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": true
       }
     },
     "objects": {
@@ -40,7 +58,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "12D"
+                  "Value": "28D"
                 }
               }
             },
@@ -58,27 +76,6 @@
           },
           "selector": {
             "id": "default"
-          }
-        },
-        {
-          "properties": {
-            "fontSize": {
-              "expr": {
-                "Literal": {
-                  "Value": "12D"
-                }
-              }
-            },
-            "bold": {
-              "expr": {
-                "Literal": {
-                  "Value": "true"
-                }
-              }
-            }
-          },
-          "selector": {
-            "metadata": "ETL Runs.Latest Execution Label"
           }
         }
       ],
@@ -109,7 +106,14 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'LATEST START (UTC)'"
+                  "Value": "'SUCCESSFUL RUNS'"
+                }
+              }
+            },
+            "bold": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
                 }
               }
             },
@@ -126,7 +130,7 @@
             }
           },
           "selector": {
-            "metadata": "ETL Runs.Latest Execution Label"
+            "metadata": "ETL Runs.Successful Runs"
           }
         }
       ],
@@ -257,7 +261,7 @@
             }
           },
           "selector": {
-            "metadata": "ETL Runs.Latest Execution Label"
+            "metadata": "ETL Runs.Successful Runs"
           }
         }
       ]

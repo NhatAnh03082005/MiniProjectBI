@@ -2,12 +2,12 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "cf696f15390844268ff1",
   "position": {
-    "x": 336,
-    "y": 133,
-    "z": 1000,
-    "width": 1480,
-    "height": 32,
-    "tabOrder": 1000
+    "x": 338,
+    "y": 123,
+    "z": 0,
+    "height": 38.984771573604057,
+    "width": 842.07106598984763,
+    "tabOrder": 0
   },
   "visual": {
     "visualType": "textbox",
@@ -19,12 +19,10 @@
               {
                 "textRuns": [
                   {
-                    "value": "SQL SERVER PRIMARY  /  NATIVE CLI EXECUTIONS  /  UTC",
+                    "value": "AMAZON DELIVERY BI / ETL EXECUTION MONITORING / UTC",
                     "textStyle": {
-                      "fontFamily": "Segoe UI",
-                      "fontSize": "13pt",
                       "fontWeight": "bold",
-                      "color": "#64748B"
+                      "fontSize": "18pt"
                     }
                   }
                 ]

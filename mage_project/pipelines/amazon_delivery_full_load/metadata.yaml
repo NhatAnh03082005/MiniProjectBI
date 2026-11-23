@@ -104,7 +104,6 @@ spark_config: {}
 tags: []
 type: python
 uuid: amazon_delivery_full_load
-variables:
-  source_file_path: demo/etl_batches/01_baseline.csv
+variables: {}
 variables_dir: C:\Users\PC\.mage_data\mage_project
 widgets: []

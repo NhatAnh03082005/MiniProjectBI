@@ -1,5 +1,7 @@
 # SQL Server bootstrap and migration
 
+> Cập nhật: đã gộp staging/audit, audit.dbt_run và Monitoring vào `sql/run_sql_skeleton.sql` (database chính) và `sql/run_sql_skeleton_demo.sql` (Demo). Chọn đúng một file tổng hợp, chạy trong SSMS thay cho ba file Monitoring riêng. Không cần SQLCMD Mode. Fact/Dimension vẫn do dbt build trong pipeline tạo/cập nhật. Không reset dữ liệu.
+
 Thư mục SQL tạo database, schema, audit và current-state raw staging cho Mage.
 Các script DDL là idempotent: có thể chạy trên database mới hoặc nâng cấp
 database đã chứa dữ liệu mà không drop bảng.

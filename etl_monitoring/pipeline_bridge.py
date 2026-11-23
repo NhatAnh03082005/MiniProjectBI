@@ -1,32 +1,35 @@
-"""Bridge the existing main pipeline to the monitoring contract on DEMO only.
+"""Bridge the existing main pipeline to the monitoring contract on explicit DEMO or approved PRIMARY targets.
 
 No DDL, process launch, new upsert implementation or source-target fallback.
-PRIMARY/legacy isolated TEST adapters remain separate explicit deployments.
+The legacy isolated TEST adapter remains a separate deployment. No automatic DB writes on import.
 """
 import json
 import os
 from uuid import uuid4
 
 
-class DemoSettings:
-    environment = 'DEMO'
+class PipelineSettings:
 
     def __init__(self):
-        if os.environ.get('ETL_MONITORING_ENV') != 'DEMO':
-            raise RuntimeError('Integrated monitoring requires ETL_MONITORING_ENV=DEMO.')
+        self.environment = os.environ.get('ETL_MONITORING_ENV')
         self.database = os.environ.get('MSSQL_DATABASE')
-        if self.database != 'AmazonDeliveryBI_Demo':
-            raise RuntimeError('Integrated monitoring is limited to AmazonDeliveryBI_Demo.')
+        targets = {'DEMO': 'AmazonDeliveryBI_Demo', 'PRIMARY': 'AmazonDeliveryBI'}
+        if self.environment not in targets or self.database != targets[self.environment]:
+            raise RuntimeError('Monitoring environment and business database do not match.')
+        if self.environment == 'PRIMARY' and (
+                os.environ.get('ETL_MONITORING_INTEGRATED') != '1' or
+                os.environ.get('ETL_MONITORING_PRIMARY_WRITES') != 'APPROVED_PRIMARY'):
+            raise RuntimeError('PRIMARY requires explicit integrated monitoring enablement.')
 
     def verify(self, connection):
         row = connection.execute("""SELECT DB_NAME(), CONVERT(nvarchar(128),
             (SELECT value FROM sys.extended_properties
              WHERE class=0 AND name='ETLMonitoring.Environment'))""").fetchone()
-        if tuple(row) != (self.database, 'APPROVED_DEMO'):
-            raise RuntimeError('Deploy DEMO monitoring SQL before enabling monitoring.')
+        if tuple(row) != (self.database, 'APPROVED_' + self.environment):
+            raise RuntimeError('Deploy monitoring SQL and matching environment marker before enabling monitoring.')
         for name in ('etl_runs', 'etl_step_runs', 'etl_record_metrics', 'etl_errors'):
             if connection.execute("SELECT OBJECT_ID(?, 'U')", 'monitoring.' + name).fetchone()[0] is None:
-                raise RuntimeError('DEMO monitoring tables are incomplete.')
+                raise RuntimeError('Monitoring tables are incomplete.')
 
     def connect(self, autocommit=True):
         import pyodbc
@@ -46,7 +49,7 @@ def begin_export(payload):
     if not runtime.enabled():
         return None
     # Preflight before any business DML, including explicit target guard.
-    settings = DemoSettings()
+    settings = PipelineSettings()
     connection = settings.connect()
     connection.close()
     if not payload.get('monitoring_context'):
@@ -60,7 +63,7 @@ def bind_batch(ctx, payload, batch_id):
     if ctx is None:
         return
     from etl_monitoring.adapter import MonitoringAdapter
-    MonitoringAdapter(DemoSettings()).bind_metadata(
+    MonitoringAdapter(PipelineSettings()).bind_metadata(
         ctx, legacy_load_batch_id=batch_id, source_file=payload['source_file_name'],
         source_checksum=payload['source_file_checksum'])
 
@@ -91,7 +94,7 @@ def export_failed(ctx, error, commit_attempted=False):
     # A lost COMMIT acknowledgement is not proof of rollback. Preserve witness.
     connection = None
     try:
-        connection = DemoSettings().connect()
+        connection = PipelineSettings().connect()
         runtime.execute(connection, """UPDATE monitoring.etl_runs SET status='IN_DOUBT',end_time=NULL
             WHERE execution_key=? AND status IN ('STARTED','WAITING_DBT');""", ctx.execution_key)
         runtime.event(ctx, 'export', 'ERROR', 'COMMIT outcome unknown; reconcile witness before rerun', 'COMMIT_UNKNOWN')
@@ -108,7 +111,7 @@ class DbtSession:
         from etl_monitoring import runtime
         from etl_monitoring.adapter import MonitoringAdapter
         self.stage = 'dbt'
-        self.settings = DemoSettings()
+        self.settings = PipelineSettings()
         if 'monitoring_context' not in verified or len(verified) != 1:
             raise RuntimeError('No monitoring context for dbt; rerun whole pipeline from Loader.')
         self.ctx = runtime.context(str(verified.iloc[0]['monitoring_context']))

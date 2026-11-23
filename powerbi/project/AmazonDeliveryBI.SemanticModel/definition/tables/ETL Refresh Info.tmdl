@@ -1,0 +1,63 @@
+table 'ETL Refresh Info'
+	lineageTag: 33813d5e-2ee8-478b-9b43-108e9c8742db
+
+	measure 'ETL Refresh Label' =
+			
+			SELECTEDVALUE('ETL Refresh Info'[database_name])
+			    & UNICHAR(10)
+			    & "Refresh (UTC+7)"
+			    & UNICHAR(10)
+			    & FORMAT(
+			        MAX('ETL Refresh Info'[refreshed_at]),
+			        "dd/MM/yyyy HH:mm:ss"
+			    )
+		lineageTag: 81241ce3-e15b-4e10-81ae-ae2ade01e364
+
+	column database_name
+		dataType: string
+		lineageTag: 746a859a-16ec-4504-a6a4-3225692838e3
+		summarizeBy: none
+		sourceColumn: database_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column refreshed_at
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: b83df1e2-4957-45d5-b706-156408fbe626
+		summarizeBy: none
+		sourceColumn: refreshed_at
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'ETL Refresh Info' = m
+		mode: import
+		source =
+				let
+				    RefreshTime =
+				        DateTimeZone.RemoveZone(
+				            DateTimeZone.SwitchZone(
+				                DateTimeZone.FixedUtcNow(),
+				                7
+				            )
+				        ),
+				    Result =
+				        #table(
+				            type table [
+				                database_name = text,
+				                refreshed_at = datetime
+				            ],
+				            {
+				                {
+				                    #"ETL Monitoring Database",
+				                    RefreshTime
+				                }
+				            }
+				        )
+				in
+				    Result
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

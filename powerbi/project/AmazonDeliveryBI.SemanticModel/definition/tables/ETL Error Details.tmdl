@@ -1,6 +1,28 @@
 table 'ETL Error Details'
 	lineageTag: 214a05a4-d77d-464f-b97a-09d29a269708
 
+	measure 'Step Display' =
+			
+			VAR ErrorCount =
+			    COALESCE(
+			        COUNTROWS('ETL Error Details'),
+			        0
+			    )
+			VAR StepName =
+			    SELECTEDVALUE('ETL Error Details'[step_key])
+			RETURN
+			    IF(
+			        ErrorCount = 0,
+			        BLANK(),
+			        SWITCH(
+			            TRUE(),
+			            ISBLANK(StepName), "Nhiều bước",
+			            LEFT(StepName, 9) = "dbt_node:", "dbt",
+			            StepName
+			        )
+			    )
+		lineageTag: ca9aeb91-11bf-4805-a2b3-b89011de6506
+
 	column error_id
 		dataType: int64
 		lineageTag: c1393752-102b-4d0e-bd8b-89bc97b6988f
@@ -95,9 +117,12 @@ table 'ETL Error Details'
 				let
 				    Source = Sql.Database(#"ETL Monitoring Server", #"ETL Monitoring Database", [CreateNavigationProperties=false]),
 				    Identity = Value.NativeQuery(Source, "SELECT DB_NAME() AS db_name, CONVERT(nvarchar(128), SERVERPROPERTY('ServerName')) AS server_name, (SELECT CONVERT(nvarchar(128),value) FROM sys.extended_properties WHERE class=0 AND name='ETLMonitoring.Environment') AS environment"),
-				    Guarded = if Identity{0}[db_name] = "AmazonDeliveryBI_Demo" and Identity{0}[environment] = "APPROVED_DEMO" then Source else error "ETL Monitoring requires the configured DEMO target and APPROVED_DEMO marker",
+				    Guarded = if ((#"ETL Monitoring Database" = "AmazonDeliveryBI" and Identity{0}[db_name] = "AmazonDeliveryBI" and Identity{0}[environment] = "APPROVED_PRIMARY") or (#"ETL Monitoring Database" = "AmazonDeliveryBI_Demo" and Identity{0}[db_name] = "AmazonDeliveryBI_Demo" and Identity{0}[environment] = "APPROVED_DEMO")) then Source else error "ETL Monitoring requires the configured target and matching approved environment marker",
 				    View = Guarded{[Schema="monitoring", Item="vw_etl_error_details"]}[Data]
 				in
 				    View
 
-	annotation PBI_ResultType = Table
+	annotation PBI_ResultType = Exception
+
+	annotation PBI_NavigationStepName = Navigation
+

@@ -2,12 +2,12 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
   "name": "a160c674618c4ec889db",
   "position": {
-    "x": 336,
-    "y": 835,
-    "z": 23000,
-    "height": 205,
-    "width": 1520,
-    "tabOrder": 23000
+    "x": 336.59693677182878,
+    "y": 718.4353973033119,
+    "z": 16000,
+    "height": 316.69066631758085,
+    "width": 899.40149234192961,
+    "tabOrder": 16000
   },
   "visual": {
     "visualType": "tableEx",
@@ -28,24 +28,7 @@
               },
               "queryRef": "ETL Runs.run_id",
               "nativeQueryRef": "Run ID",
-              "active": true,
               "displayName": "Run ID"
-            },
-            {
-              "field": {
-                "Column": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "ETL Runs"
-                    }
-                  },
-                  "Property": "attempt_id"
-                }
-              },
-              "queryRef": "ETL Runs.attempt_id",
-              "nativeQueryRef": "Attempt",
-              "active": true,
-              "displayName": "Attempt"
             },
             {
               "field": {
@@ -60,8 +43,22 @@
               },
               "queryRef": "ETL Runs.pipeline_display",
               "nativeQueryRef": "Pipeline",
-              "active": true,
               "displayName": "Pipeline"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "ETL Runs"
+                    }
+                  },
+                  "Property": "source_file"
+                }
+              },
+              "queryRef": "ETL Runs.source_file",
+              "nativeQueryRef": "Source File",
+              "displayName": "Source File"
             },
             {
               "field": {
@@ -76,7 +73,6 @@
               },
               "queryRef": "ETL Runs.overall_status",
               "nativeQueryRef": "Status",
-              "active": true,
               "displayName": "Status"
             },
             {
@@ -91,9 +87,8 @@
                 }
               },
               "queryRef": "ETL Runs.start_time",
-              "nativeQueryRef": "Start (UTC)",
-              "active": true,
-              "displayName": "Start (UTC)"
+              "nativeQueryRef": "Start time",
+              "displayName": "Start time"
             },
             {
               "field": {
@@ -107,89 +102,8 @@
                 }
               },
               "queryRef": "ETL Runs.end_time",
-              "nativeQueryRef": "End (UTC)",
-              "active": true,
-              "displayName": "End (UTC)"
-            },
-            {
-              "field": {
-                "Measure": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "ETL Runs"
-                    }
-                  },
-                  "Property": "Execution Duration Seconds"
-                }
-              },
-              "queryRef": "ETL Runs.Execution Duration Seconds",
-              "nativeQueryRef": "Duration",
-              "active": true,
-              "displayName": "Duration"
-            },
-            {
-              "field": {
-                "Measure": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "ETL Runs"
-                    }
-                  },
-                  "Property": "Total Inserted Rows"
-                }
-              },
-              "queryRef": "ETL Runs.Total Inserted Rows",
-              "nativeQueryRef": "Inserted",
-              "active": true,
-              "displayName": "Inserted"
-            },
-            {
-              "field": {
-                "Measure": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "ETL Runs"
-                    }
-                  },
-                  "Property": "Total Updated Rows"
-                }
-              },
-              "queryRef": "ETL Runs.Total Updated Rows",
-              "nativeQueryRef": "Updated",
-              "active": true,
-              "displayName": "Updated"
-            },
-            {
-              "field": {
-                "Measure": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "ETL Runs"
-                    }
-                  },
-                  "Property": "Total Rejected Rows"
-                }
-              },
-              "queryRef": "ETL Runs.Total Rejected Rows",
-              "nativeQueryRef": "Rejected",
-              "active": true,
-              "displayName": "Rejected"
-            },
-            {
-              "field": {
-                "Measure": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "ETL Runs"
-                    }
-                  },
-                  "Property": "Total Unchanged Rows"
-                }
-              },
-              "queryRef": "ETL Runs.Total Unchanged Rows",
-              "nativeQueryRef": "Unchanged",
-              "active": true,
-              "displayName": "Unchanged"
+              "nativeQueryRef": "End time",
+              "displayName": "End time"
             }
           ]
         }
@@ -204,10 +118,10 @@
                     "Entity": "ETL Runs"
                   }
                 },
-                "Property": "start_time"
+                "Property": "end_time"
               }
             },
-            "direction": "Descending"
+            "direction": "Ascending"
           }
         ]
       }
@@ -507,6 +421,20 @@
                       "Value": "'#232F3E'"
                     }
                   }
+                }
+              }
+            },
+            "fontFamily": {
+              "expr": {
+                "Literal": {
+                  "Value": "'''Segoe UI Semibold'', wf_segoe-ui_semibold, helvetica, arial, sans-serif'"
+                }
+              }
+            },
+            "bold": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
                 }
               }
             }

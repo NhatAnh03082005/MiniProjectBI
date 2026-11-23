@@ -1,0 +1,210 @@
+1
+00:00:00,000 --> 00:00:17,500
+Hệ thống BI phân tích giao hàng, tích hợp ETL Monitoring
+và Generative AI.
+
+2
+00:00:17,500 --> 00:00:35,000
+Luồng dữ liệu: CSV → Mage → dbt → Data Warehouse → Power
+BI và AI.
+
+3
+00:00:35,000 --> 00:00:52,500
+Tắt trigger cũ trước khi reset database AmazonDeliveryBI.
+
+4
+00:00:52,500 --> 00:01:10,000
+Reset xóa dữ liệu và cấu trúc SQL; lịch sử trigger của
+Mage được lưu riêng.
+
+5
+00:01:10,000 --> 00:01:27,500
+Chạy một script tổng hợp để tạo staging, audit và cấu trúc
+Monitoring.
+
+6
+00:01:27,500 --> 00:01:45,000
+Trước khi nạp, staging và các bảng lịch sử trong database
+mới đều rỗng.
+
+7
+00:01:45,000 --> 00:02:00,000
+Khởi động Mage với SQL Authentication và bật ETL
+Monitoring.
+
+8
+00:02:00,000 --> 00:02:15,000
+Mage và dbt cùng sử dụng database AmazonDeliveryBI.
+
+9
+00:02:15,000 --> 00:02:30,000
+Mage kiểm tra cấu trúc, khóa và ngày trước khi upsert
+staging.
+
+10
+00:02:30,000 --> 00:02:45,000
+Block cuối tự chạy dbt build, tests và đối soát dữ liệu
+DDS.
+
+11
+00:02:45,000 --> 00:03:07,500
+Tạo Schedule trigger: full load một lần vào thời điểm đã
+hẹn.
+
+12
+00:03:07,500 --> 00:03:30,000
+Truyền rõ file CSV gốc; bật trigger và chờ scheduler tự
+thực thi.
+
+13
+00:03:30,000 --> 00:03:52,500
+Đến giờ hẹn, Mage tự tạo pipeline run. Không bấm Run now.
+
+14
+00:03:52,500 --> 00:04:15,000
+Tua nhanh thời gian xử lý; giữ lại trạng thái và timestamp
+của run.
+
+15
+00:04:15,000 --> 00:04:37,500
+Full load đọc 43.739 dòng và ghi audit theo số liệu xử lý
+thực tế.
+
+16
+00:04:37,500 --> 00:05:00,000
+Đối soát: 43.739 staging = 43.594 Fact + 145 dòng bị dbt
+loại.
+
+17
+00:05:00,000 --> 00:05:22,500
+Refresh Power BI sau khi dbt và đối soát hoàn tất.
+
+18
+00:05:22,500 --> 00:05:45,000
+KPI nghiệp vụ tính trên Fact được chấp nhận, không tính
+trên toàn raw CSV.
+
+19
+00:05:45,000 --> 00:06:07,500
+Tạo lịch incremental với cron */10 * * * *.
+
+20
+00:06:07,500 --> 00:06:30,000
+Lịch chạy ở các phút 00, 10, 20…; đầu vào là batch mixed
+mô phỏng.
+
+21
+00:06:30,000 --> 00:06:52,500
+Scheduler kích hoạt lần incremental đầu tiên.
+
+22
+00:06:52,500 --> 00:07:15,000
+Kết quả dự kiến: 2 insert, 2 update, 2 unchanged và 2
+reject ở Mage.
+
+23
+00:07:15,000 --> 00:07:37,500
+Kiểm tra hai ID mới và hai đơn cũ được cập nhật trong
+SSMS.
+
+24
+00:07:37,500 --> 00:08:00,000
+Hai dòng lỗi không vào staging; dbt tiếp tục dựng DDS và
+kiểm tra chất lượng.
+
+25
+00:08:00,000 --> 00:08:22,500
+Giữ cùng trigger và cùng file cho lần chạy theo lịch tiếp
+theo.
+
+26
+00:08:22,500 --> 00:08:45,000
+Lần hai: 0 insert/update, 6 unchanged, 2 reject. Tắt lịch
+để tránh lần thứ ba.
+
+27
+00:08:45,000 --> 00:09:07,500
+Đối chiếu audit của hai lần chạy cùng file.
+
+28
+00:09:07,500 --> 00:09:30,000
+Hai ID mới vẫn chỉ có một bản ghi mỗi ID: rerun không tạo
+dữ liệu trùng.
+
+29
+00:09:30,000 --> 00:09:52,500
+Refresh trang ETL Monitoring và chọn từng run.
+
+30
+00:09:52,500 --> 00:10:15,000
+Bộ đếm và cảnh báo của run được chọn được đối chiếu với
+SQL.
+
+31
+00:10:15,000 --> 00:10:37,500
+Tạo trigger Once cho file sai header, đặt thời điểm trong
+tương lai.
+
+32
+00:10:37,500 --> 00:11:00,000
+Tình huống này kiểm tra ghi nhận lỗi trước khi nạp và chạy
+dbt.
+
+33
+00:11:00,000 --> 00:11:22,500
+Validation phát hiện sai số cột: nhận 2, cần 16.
+
+34
+00:11:22,500 --> 00:11:45,000
+Run thất bại; dbt không chạy và dữ liệu nghiệp vụ không
+thay đổi.
+
+35
+00:11:45,000 --> 00:12:07,500
+Đối chiếu dashboard sau Refresh: 4 run, 3 thành công và 1
+thất bại.
+
+36
+00:12:07,500 --> 00:12:30,000
+Success rate là 75%. Warning chất lượng không tự đồng
+nghĩa pipeline thất bại.
+
+37
+00:12:30,000 --> 00:12:52,500
+dbt docs hiển thị lineage và mô tả model, cột, khóa và quy
+tắc biến đổi.
+
+38
+00:12:52,500 --> 00:13:15,000
+Metadata audit lưu nguồn file, trạng thái, số dòng và
+snapshot từng attempt.
+
+39
+00:13:15,000 --> 00:13:33,750
+Ứng dụng AI đọc DDS và tính KPI trong phạm vi người dùng
+chọn.
+
+40
+00:13:33,750 --> 00:13:52,500
+Tạo summary và giải thích các khác biệt bằng những chỉ số
+đã tính.
+
+41
+00:13:52,500 --> 00:14:11,250
+Mở dẫn chứng để kiểm tra nhận xét; đối chiếu cùng bộ lọc
+với Power BI.
+
+42
+00:14:11,250 --> 00:14:30,000
+Baseline 195 phút là ngưỡng thống kê của nhóm, không phải
+SLA.
+
+43
+00:14:30,000 --> 00:14:45,000
+Demo đã trình bày lịch ETL, upsert, kiểm soát lỗi, giám
+sát và phân tích BI/AI.
+
+44
+00:14:45,000 --> 00:15:00,000
+Kết thúc: tắt các trigger và giữ lại log, source cùng bằng
+chứng đối chiếu.

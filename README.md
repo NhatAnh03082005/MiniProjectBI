@@ -18,6 +18,7 @@ Xây dựng hệ thống Business Intelligence tích hợp Generative AI để p
 
 ## Tài liệu hiện hành
 
+- [Thay đổi Giai đoạn 3 và hướng dẫn cập nhật báo cáo](report/GIAI_DOAN_3_THAY_DOI_VA_TRIEN_KHAI.md)
 - [Data Dictionary hiện hành](project_management/DATA_DICTIONARY.md)
 - [Mapping và lineage hiện hành](project_management/SOURCE_TO_TARGET_MAPPING.md)
 - [Data Contract hiện hành](project_management/DATA_CONTRACT.md)

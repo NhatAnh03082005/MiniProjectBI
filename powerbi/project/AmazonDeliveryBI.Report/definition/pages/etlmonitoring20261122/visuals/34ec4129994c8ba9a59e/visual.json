@@ -1,13 +1,13 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.12.0/schema.json",
-  "name": "6b2bc4fde13247719fa4",
+  "name": "34ec4129994c8ba9a59e",
   "position": {
-    "x": 24,
-    "y": 570,
-    "z": 16000,
-    "width": 246,
-    "height": 100,
-    "tabOrder": 16000
+    "x": 1383.7409713568682,
+    "y": 172.31273794416254,
+    "z": 19000,
+    "height": 104.96033512239822,
+    "width": 220,
+    "tabOrder": 19000
   },
   "visual": {
     "visualType": "cardVisual",
@@ -23,14 +23,32 @@
                       "Entity": "ETL Runs"
                     }
                   },
-                  "Property": "Latest Execution Status"
+                  "Property": "Unfinished Runs"
                 }
               },
-              "queryRef": "ETL Runs.Latest Execution Status",
-              "nativeQueryRef": "Latest Execution Status"
+              "queryRef": "ETL Runs.Unfinished Runs",
+              "nativeQueryRef": "Unfinished Runs"
             }
           ]
         }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "ETL Runs"
+                  }
+                },
+                "Property": "Unfinished Runs"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": true
       }
     },
     "objects": {
@@ -40,7 +58,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "17D"
+                  "Value": "28D"
                 }
               }
             },
@@ -58,27 +76,6 @@
           },
           "selector": {
             "id": "default"
-          }
-        },
-        {
-          "properties": {
-            "fontSize": {
-              "expr": {
-                "Literal": {
-                  "Value": "17D"
-                }
-              }
-            },
-            "bold": {
-              "expr": {
-                "Literal": {
-                  "Value": "true"
-                }
-              }
-            }
-          },
-          "selector": {
-            "metadata": "ETL Runs.Latest Execution Status"
           }
         }
       ],
@@ -106,13 +103,6 @@
         },
         {
           "properties": {
-            "text": {
-              "expr": {
-                "Literal": {
-                  "Value": "'LATEST OVERALL STATUS'"
-                }
-              }
-            },
             "fontColor": {
               "solid": {
                 "color": {
@@ -123,10 +113,17 @@
                   }
                 }
               }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'UNFINISHED RUNS'"
+                }
+              }
             }
           },
           "selector": {
-            "metadata": "ETL Runs.Latest Execution Status"
+            "metadata": "ETL Runs.Unfinished Runs"
           }
         }
       ],
@@ -257,7 +254,7 @@
             }
           },
           "selector": {
-            "metadata": "ETL Runs.Latest Execution Status"
+            "metadata": "ETL Runs.Unfinished Runs"
           }
         }
       ]
