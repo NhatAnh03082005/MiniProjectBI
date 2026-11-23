@@ -26,6 +26,8 @@ QUESTION_SUGGESTIONS = (
     "Ngày nào có mức tăng thời gian giao trung bình lớn nhất?",
     "Khoảng cách giao hàng hợp lệ trung bình là bao nhiêu?",
 )
+DATA_MODE = "Phân tích dữ liệu"
+GENERAL_MODE = "Hỏi Gemini chung"
 CSS = """
 <style>
 html, body, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
@@ -48,6 +50,29 @@ h3 { font-size: 1.08rem !important; }
 }
 [data-testid="stText"] { font-family: 'Segoe UI', Arial, sans-serif; font-size: 1rem; line-height: 1.65; }
 button[kind="primary"] { background: #FF9900; color: #232F3E; border-color: #FF9900; }
+[data-testid="stForm"] .st-key-ai_question [data-testid="InputInstructions"] { display: none; }
+.st-key-ai_request_form .st-key-generate_summary button,
+.st-key-ai_request_form .st-key-generate_answer button {
+  min-height: 2.75rem;
+  transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease,
+              box-shadow 220ms ease, opacity 220ms ease;
+}
+.st-key-ai_request_form .st-key-generate_answer button:not(:disabled) {
+  background: #FFFFFF; color: #657180; border-color: #D5DBE3; box-shadow: none; opacity: .72;
+}
+.st-key-ai_request_form:has(.st-key-ai_question textarea:not(:placeholder-shown))
+  .st-key-generate_summary button:not(:disabled) {
+  background: #FFFFFF; color: #232F3E; border-color: #D5DBE3; box-shadow: none;
+}
+.st-key-ai_request_form:has(.st-key-ai_question textarea:not(:placeholder-shown))
+  .st-key-generate_answer button:not(:disabled) {
+  background: #FF9900; color: #232F3E; border-color: #FF9900;
+  box-shadow: 0 4px 12px rgba(255, 153, 0, .22); opacity: 1;
+}
+.st-key-ai_request_form:has(.st-key-ai_question textarea:not(:placeholder-shown))
+  .st-key-generate_answer button:not(:disabled):hover {
+  background: #FFAD33; border-color: #FFAD33;
+}
 [data-testid="stTabs"] { margin-top: 1.2rem; }
 .st-key-kpi_grid { container-type: inline-size; container-name: kpis; }
 .st-key-kpi_grid [data-testid="stHorizontalBlock"] {
@@ -367,7 +392,7 @@ def _generate(bundle: dict, context: str, question: str = "") -> None:
         if type(response.attempts) is not int or not 1 <= response.attempts <= 3:
             raise GroundingError("Số lần gọi Gemini không hợp lệ; hãy tạo lại phân tích.")
         st.session_state["_ai_result"] = {
-            "snapshot_id": bundle["snapshot_id"], "context": context, "question": question,
+            "mode": "data", "snapshot_id": bundle["snapshot_id"], "context": context, "question": question,
             "validated": validated, "model": response.model, "model_version": response.model_version,
             "response_id": response.response_id, "usage": response.usage, "attempts": response.attempts,
             "usage_scope": getattr(response, "usage_scope", "final_attempt_only"),
@@ -385,73 +410,149 @@ def _generate(bundle: dict, context: str, question: str = "") -> None:
         st.error("Chưa tạo được phân tích. Kiểm tra khóa Gemini, mô hình, kết nối Internet hoặc hạn mức rồi thử lại.")
 
 
+def _generate_general(context: str, question: str) -> None:
+    _invalidate_ai()
+    st.session_state["_ai_stale"] = False
+    progress = st.empty()
+
+    def show_retry(next_attempt: int, max_attempts: int, safe_reason: str) -> None:
+        if type(next_attempt) is int and type(max_attempts) is int and 1 < next_attempt <= max_attempts <= 3:
+            progress.info(f"Gemini chưa trả về câu trả lời hợp lệ. Đang thử lại lần {next_attempt}/{max_attempts}…")
+
+    try:
+        with st.spinner("Gemini đang trả lời…"):
+            response = Gemini.generate_general(
+                api_key=st.session_state["gemini_api_key"].strip(),
+                model=st.session_state["gemini_model"].strip(),
+                question=question,
+                on_retry=show_retry,
+            )
+        answer = response.payload.get("answer") if isinstance(response.payload, dict) else None
+        if set(response.payload) != {"answer"} or not isinstance(answer, str) \
+                or not answer.strip() or len(answer) > 12000:
+            raise Gemini.GeminiError("Gemini chưa trả về câu trả lời chung hợp lệ.")
+        if type(response.attempts) is not int or not 1 <= response.attempts <= 3:
+            raise Gemini.GeminiError("Số lần gọi Gemini không hợp lệ; hãy thử lại.")
+        st.session_state["_ai_result"] = {
+            "mode": "general", "snapshot_id": None, "context": context, "question": question,
+            "answer": answer.strip(), "model": response.model,
+            "model_version": response.model_version, "response_id": response.response_id,
+            "usage": response.usage, "attempts": response.attempts,
+            "usage_scope": getattr(response, "usage_scope", "final_attempt_only"),
+            "validation": "general_text_v1",
+        }
+        if response.attempts > 1:
+            progress.success(f"Đã nhận phản hồi Gemini sau {response.attempts} lần gọi.")
+        else:
+            progress.empty()
+    except Gemini.GeminiError as error:
+        progress.empty()
+        st.error(str(error))
+    except Exception:
+        progress.empty()
+        st.error("Chưa nhận được câu trả lời. Kiểm tra khóa Gemini, mô hình, kết nối Internet hoặc hạn mức rồi thử lại.")
+
+
 def _ai_tab(bundle: dict | None, context: str) -> None:
     if "ai_question" not in st.session_state:
         st.session_state["ai_question"] = ""
-    with st.expander("Gợi ý câu hỏi và phạm vi hỗ trợ", expanded=False):
-        st.markdown(
-            "**Bạn không cần nhớ câu lệnh cố định.** Hãy viết câu hỏi như khi trao đổi với một người phân tích dữ liệu."
-        )
-        st.selectbox(
-            "Câu hỏi gợi ý",
-            QUESTION_SUGGESTIONS,
-            index=None,
-            placeholder="Chọn một câu hỏi mẫu",
-            key="ai_question_suggestion",
-            on_change=_use_question_suggestion,
-        )
-        st.caption(
-            "Có thể hỏi về tổng quan; ý nghĩa hoặc giá trị KPI; xu hướng theo ngày; nhóm cao nhất, thấp nhất "
-            "hoặc hai nhóm cụ thể theo giao thông, thời tiết, phương tiện, khu vực, danh mục, khung giờ và "
-            "khoảng cách. Muốn đổi ngày hoặc phạm vi, hãy dùng bộ lọc trước rồi đặt câu hỏi. Ứng dụng không "
-            "dự báo tài chính, suy luận nguyên nhân, tạo SQL hay liệt kê từng đơn hàng."
-        )
-    question = st.text_area("Câu hỏi về dữ liệu đang chọn (không bắt buộc)", key="ai_question",
-                            on_change=_invalidate_ai, height=90,
-                            placeholder="Ví dụ: P90 là gì và hiện tại bằng bao nhiêu?")
-    st.caption(
-        "Bạn có thể hỏi bằng tiếng Việt tự nhiên. Kết quả luôn dùng phạm vi đang chọn và ứng dụng sẽ "
-        "nói rõ khi dữ liệu chưa đủ hoặc câu hỏi nằm ngoài thông tin hiện có. Không nhập mật khẩu hay API key vào ô này."
+    mode = st.radio(
+        "Chế độ trả lời", (DATA_MODE, GENERAL_MODE), horizontal=True,
+        key="ai_answer_mode", on_change=_invalidate_ai,
     )
+    data_mode = mode == DATA_MODE
+    if data_mode:
+        with st.expander("Gợi ý câu hỏi và phạm vi hỗ trợ", expanded=False):
+            st.markdown(
+                "**Bạn không cần nhớ câu lệnh cố định.** Hãy viết câu hỏi như khi trao đổi với một người phân tích dữ liệu."
+            )
+            st.selectbox(
+                "Câu hỏi gợi ý",
+                QUESTION_SUGGESTIONS,
+                index=None,
+                placeholder="Chọn một câu hỏi mẫu",
+                key="ai_question_suggestion",
+                on_change=_use_question_suggestion,
+            )
+            st.caption(
+                "Có thể hỏi về tổng quan; ý nghĩa hoặc giá trị KPI; xu hướng theo ngày; nhóm cao nhất, thấp nhất "
+                "hoặc hai nhóm cụ thể theo giao thông, thời tiết, phương tiện, khu vực, danh mục, khung giờ và "
+                "khoảng cách. Muốn đổi ngày hoặc phạm vi, hãy dùng bộ lọc trước rồi đặt câu hỏi. Ứng dụng không "
+                "dự báo tài chính, suy luận nguyên nhân, tạo SQL hay liệt kê từng đơn hàng."
+            )
+    else:
+        st.caption(
+            "Chế độ này trả lời kiến thức chung bằng Gemini. Câu trả lời không dùng dữ liệu DDS, "
+            "không đại diện cho dashboard và không có số liệu đối chiếu."
+        )
     key_ready = bool(st.session_state.get("gemini_api_key", "").strip())
     model_ready = bool(st.session_state.get("gemini_model", "").strip())
     data_ready = bundle is not None and (bundle.get("kpis", {}).get("total_records") or 0) > 0
-    ready = key_ready and model_ready and data_ready
-    has_question = bool(question.strip())
-    if has_question:
+    common_ready = key_ready and model_ready
+    summary_ready = common_ready and data_ready and data_mode
+    answer_ready = common_ready and (data_ready if data_mode else True)
+    with st.form("ai_request_form", clear_on_submit=False, enter_to_submit=False, border=False):
+        question = st.text_area(
+            "Câu hỏi về dữ liệu đang chọn (không bắt buộc)" if data_mode else "Câu hỏi cho Gemini",
+            key="ai_question", height=90,
+            placeholder=("Ví dụ: P90 là gì và hiện tại bằng bao nhiêu?" if data_mode
+                         else "Bạn có thể hỏi một câu hỏi kiến thức chung…"),
+        )
         st.caption(
-            "Bạn đã nhập câu hỏi. Hãy bấm **Giải thích câu hỏi** để gửi nội dung này; "
-            "nút **Tạo tóm tắt và phân tích** chỉ tạo báo cáo tổng quan."
+            ("Bạn có thể hỏi bằng tiếng Việt tự nhiên; lỗi gõ rõ nghĩa cũng được nhận diện mà không cần khớp câu mẫu. "
+             "Kết quả luôn dùng phạm vi đang chọn và ứng dụng sẽ nói rõ khi dữ liệu chưa đủ hoặc câu hỏi nằm ngoài "
+             "thông tin hiện có. " if data_mode else
+             "Gemini trả lời tự do nhưng không nhận dữ liệu dashboard trong chế độ này. ")
+            + "Không nhập mật khẩu hay API key vào ô này."
         )
-    left, right = st.columns([1.4, 1])
-    with left:
-        summarize = st.button(
-            "Tạo tóm tắt và phân tích", key="generate_summary",
-            type="secondary" if has_question else "primary", width="stretch", disabled=not ready,
-        )
-    with right:
-        ask = st.button(
-            "Giải thích câu hỏi", key="generate_answer",
-            type="primary" if has_question else "secondary", width="stretch",
-            disabled=not (ready and has_question),
-        )
-    if summarize and ready:
+        left, right = st.columns(2)
+        with left:
+            summarize = st.form_submit_button(
+                "Tạo tóm tắt và phân tích", key="generate_summary",
+                type="primary", width="stretch", disabled=not summary_ready,
+            )
+        with right:
+            ask = st.form_submit_button(
+                "Giải thích câu hỏi", key="generate_answer",
+                type="secondary", width="stretch", disabled=not answer_ready,
+            )
+    if summarize and summary_ready and bundle is not None:
         _generate(bundle, context)
-    elif ask and ready and question.strip():
-        _generate(bundle, context, question.strip())
-    if not data_ready:
+    elif ask and answer_ready:
+        submitted_question = question.strip()
+        if submitted_question:
+            if data_mode and bundle is not None:
+                _generate(bundle, context, submitted_question)
+            else:
+                _generate_general(context, submitted_question)
+        else:
+            st.info("Nhập câu hỏi trước khi yêu cầu giải thích.")
+    if data_mode and not data_ready:
         st.info("Kết nối dữ liệu và chọn phạm vi có bản ghi để tạo phân tích.")
     elif not key_ready:
-        st.info("Nhập Gemini API key ở thanh bên để tạo phân tích từ số liệu đang chọn.")
+        st.info("Nhập Gemini API key ở thanh bên để sử dụng chức năng AI.")
     elif st.session_state.get("_ai_stale"):
         st.info("Câu hỏi, phạm vi hoặc thiết lập đã thay đổi. Hãy tạo lại phân tích cho lựa chọn hiện tại.")
     saved = st.session_state.get("_ai_result")
-    if saved is None or bundle is None or saved["snapshot_id"] != bundle["snapshot_id"] or saved["context"] != context:
+    if saved is None or saved["context"] != context:
+        return
+    if saved.get("mode", "data") == "general":
+        st.subheader("Câu hỏi đã gửi")
+        st.text(saved["question"])
+        st.subheader("Trả lời của Gemini")
+        st.write(saved["answer"])
+        st.caption("Câu trả lời kiến thức chung này không dựa trên DDS hoặc dashboard và không có số liệu đối chiếu.")
+        export = {key: value for key, value in saved.items() if key != "context"}
+        with st.expander("Thông tin kết quả và tải xuống"):
+            st.write("Mô hình:", saved.get("model_version") or saved.get("model"))
+            st.write("Số lần gọi Gemini:", saved["attempts"])
+            st.download_button("Tải câu trả lời Gemini (JSON)", _json_bytes(export),
+                               file_name="gemini_general_answer.json", mime="application/json",
+                               key="download_ai_general")
+        return
+    if bundle is None or saved["snapshot_id"] != bundle["snapshot_id"]:
         return
     result = saved["validated"]
-    st.caption("Gemini lựa chọn và sắp xếp các nhận xét trong danh mục đã tính. Ứng dụng dựng câu và điền số từ chứng cứ; hãy mở dẫn chứng để đối chiếu.")
-    _show_statements("Tóm tắt KPI", result.get("summary", []), bundle)
-    _show_statements("Xu hướng và khác biệt cần chú ý", result.get("explanations", []), bundle)
     if saved.get("question"):
         st.subheader("Câu hỏi đã gửi")
         st.text(saved["question"])
@@ -467,6 +568,10 @@ def _ai_tab(bundle: dict | None, context: str) -> None:
                 "Hãy nới bộ lọc hoặc chọn phạm vi khác."
             )
         _show_statements("Trả lời câu hỏi", result.get("answer", []), bundle)
+    else:
+        st.caption("Gemini lựa chọn và sắp xếp các nhận xét trong danh mục đã tính. Ứng dụng dựng câu và điền số từ chứng cứ; hãy mở dẫn chứng để đối chiếu.")
+        _show_statements("Tóm tắt KPI", result.get("summary", []), bundle)
+        _show_statements("Xu hướng và khác biệt cần chú ý", result.get("explanations", []), bundle)
     export = {key: value for key, value in saved.items() if key != "context"}
     with st.expander("Thông tin kết quả và tải xuống"):
         st.write("Mô hình:", saved.get("model_version") or saved.get("model"))
@@ -585,7 +690,10 @@ def main() -> None:
         _invalidate_ai()
         st.info("Thông tin kết nối đã thay đổi. Bấm “Kết nối và tải dữ liệu” để dùng nguồn mới.")
     elif frame is None:
-        st.info("Bắt đầu bằng cách kết nối dữ liệu ở thanh bên. Có thể xem số liệu trước khi nhập Gemini key.")
+        st.info(
+            "Kết nối dữ liệu ở thanh bên để phân tích dashboard, hoặc chọn Hỏi Gemini chung "
+            "để đặt câu hỏi kiến thức chung mà không cần tải DDS."
+        )
     elif frame.empty:
         _invalidate_ai()
         st.info("Nguồn dữ liệu chưa có bản ghi. Kiểm tra bước nạp DDS trước khi phân tích.")

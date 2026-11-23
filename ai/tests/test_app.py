@@ -58,6 +58,7 @@ class AppLifecycleTests(unittest.TestCase):
                        "database": "fixture", "snapshot_consistency": "unit-test fixture"}
         self.load = patch("ai.data.load_warehouse", return_value=(self.frame, self.source)).start()
         self.generate = patch("ai.gemini.generate", side_effect=self.response).start()
+        self.generate_general = patch("ai.gemini.generate_general", side_effect=self.general_response).start()
         self.models = patch("ai.gemini.list_models", return_value=["fixture-model-a", "fixture-model-b"]).start()
         # UI tests never touch the current Windows user's actual credentials.
         self.credential_load = patch("ai.credentials.load_key", return_value=None).start()
@@ -106,6 +107,14 @@ class AppLifecycleTests(unittest.TestCase):
         return SimpleNamespace(payload=payload, model=kwargs["model"], model_version="fixture-model-version",
                                response_id="fixture-response", usage={"input_tokens": 10, "output_tokens": 20}, attempts=1)
 
+    def general_response(self, **kwargs):
+        return SimpleNamespace(
+            payload={"answer": "Đây là câu trả lời kiến thức chung từ Gemini."},
+            model=kwargs["model"], model_version="fixture-model-version",
+            response_id="fixture-general-response",
+            usage={"input_tokens": 8, "output_tokens": 12}, attempts=1,
+        )
+
     def assert_clean(self):
         self.assertEqual(len(self.app.exception), 0, [e.value for e in self.app.exception])
 
@@ -125,6 +134,7 @@ class AppLifecycleTests(unittest.TestCase):
     def test_no_network_on_start_or_rerun_and_key_required(self):
         self.load.assert_not_called()
         self.generate.assert_not_called()
+        self.generate_general.assert_not_called()
         self.models.assert_not_called()
         self.assertTrue(self.app.button(key="generate_summary").disabled)
         self.load_data()
@@ -134,26 +144,67 @@ class AppLifecycleTests(unittest.TestCase):
         self.generate.assert_not_called()
         self.models.assert_not_called()
 
-    def test_question_text_makes_the_answer_action_primary_and_only_that_action_sends_it(self):
+    def test_question_submit_uses_current_text_without_ctrl_enter_and_actions_stay_separate(self):
         self.assertEqual(self.app.button(key="generate_summary").proto.type, "primary")
         self.assertEqual(self.app.button(key="generate_answer").proto.type, "secondary")
         self.load_data()
         self.enter_key()
-        question = "  P90 là gì và giải thích rõ thông số này giúp tôi  "
-        self.app.text_area(key="ai_question").set_value(question).run()
-        self.assert_clean()
-        self.assertEqual(self.app.button(key="generate_summary").proto.type, "secondary")
-        self.assertEqual(self.app.button(key="generate_answer").proto.type, "primary")
         self.assertFalse(self.app.button(key="generate_answer").disabled)
-        self.assertTrue(any("Hãy bấm **Giải thích câu hỏi**" in caption.value
-                            for caption in self.app.caption))
+        question = "  P90 là gì và giải thích rõ thông số này giúp tôi  "
+        self.app.text_area(key="ai_question").set_value(question)
+        self.app.button(key="generate_answer").click().run()
+        self.assert_clean()
+        self.assertEqual(self.generate.call_count, 1)
+        self.assertEqual(self.generate.call_args.kwargs["question"], question.strip())
+        headers = {header.value for header in self.app.subheader}
+        self.assertIn("Câu hỏi đã gửi", headers)
+        self.assertIn("Trả lời câu hỏi", headers)
+        self.assertNotIn("Tóm tắt KPI", headers)
+        self.assertNotIn("Xu hướng và khác biệt cần chú ý", headers)
 
+        self.app.text_area(key="ai_question").set_value("Câu hỏi vẫn đang được soạn")
         self.app.button(key="generate_summary").click().run()
         self.assert_clean()
         self.assertEqual(self.generate.call_args.kwargs["question"], "")
+        headers = {header.value for header in self.app.subheader}
+        self.assertIn("Tóm tắt KPI", headers)
+        self.assertIn("Xu hướng và khác biệt cần chú ý", headers)
+        self.assertNotIn("Câu hỏi đã gửi", headers)
+        self.assertNotIn("Trả lời câu hỏi", headers)
+
+    def test_empty_question_submit_does_not_call_gemini(self):
+        self.load_data()
+        self.enter_key()
         self.app.button(key="generate_answer").click().run()
         self.assert_clean()
-        self.assertEqual(self.generate.call_args.kwargs["question"], question.strip())
+        self.generate.assert_not_called()
+        self.assertTrue(any("Nhập câu hỏi trước" in message.value for message in self.app.info))
+
+    def test_general_mode_answers_without_sending_dashboard_data(self):
+        self.app.radio(key="ai_answer_mode").set_value("Hỏi Gemini chung").run()
+        self.assert_clean()
+        self.enter_key()
+        self.assertTrue(self.app.button(key="generate_summary").disabled)
+        self.assertFalse(self.app.button(key="generate_answer").disabled)
+        question = "Thủ đô của Pháp là gì?"
+        self.app.text_area(key="ai_question").set_value(question)
+        self.app.button(key="generate_answer").click().run()
+        self.assert_clean()
+        self.generate.assert_not_called()
+        self.generate_general.assert_called_once()
+        kwargs = self.generate_general.call_args.kwargs
+        self.assertEqual(kwargs["question"], question)
+        self.assertNotIn("bundle", kwargs)
+        saved = state(self.app, "_ai_result")
+        self.assertEqual(saved["mode"], "general")
+        self.assertEqual(saved["validation"], "general_text_v1")
+        headers = {header.value for header in self.app.subheader}
+        self.assertIn("Câu hỏi đã gửi", headers)
+        self.assertIn("Trả lời của Gemini", headers)
+        self.assertTrue(any(
+            "không dựa trên DDS" in caption.value
+            for caption in self.app.caption
+        ))
 
     def test_api_key_is_blank_password_input_and_isolated_between_sessions(self):
         first_key = self.app.text_input(key="gemini_api_key")
@@ -312,9 +363,7 @@ class AppLifecycleTests(unittest.TestCase):
         self.assertIsNone(state(self.app, "_ai_result"))
         self.assertEqual(self.generate.call_count, 2)
         self.generate_summary()
-        self.app.text_area(key="ai_question").set_value("Có bao nhiêu bản ghi?").run()
-        self.assertIsNone(state(self.app, "_ai_result"))
-        self.assertEqual(self.generate.call_count, 3)
+        self.app.text_area(key="ai_question").set_value("Có bao nhiêu bản ghi?")
         self.app.button(key="generate_answer").click().run()
         self.assert_clean()
         saved = state(self.app, "_ai_result")
@@ -469,7 +518,7 @@ class AppLifecycleTests(unittest.TestCase):
     def test_unsupported_financial_question_cannot_display_a_malicious_answer(self):
         self.load_data()
         self.enter_key()
-        self.app.text_area(key="ai_question").set_value("Dự báo doanh thu tháng sau là bao nhiêu?").run()
+        self.app.text_area(key="ai_question").set_value("Dự báo doanh thu tháng sau là bao nhiêu?")
         self.app.button(key="generate_answer").click().run()
         self.assert_clean()
         self.assertEqual(state(self.app, "_ai_result")["validated"]["answer_status"], "unsupported_question")
@@ -507,7 +556,7 @@ class AppLifecycleTests(unittest.TestCase):
         self.load_data()
         self.enter_key()
         question = "P90 là gì và giải thích rõ thông số này giúp tôi"
-        self.app.text_area(key="ai_question").set_value(question).run()
+        self.app.text_area(key="ai_question").set_value(question)
         self.app.button(key="generate_answer").click().run()
         self.assert_clean()
         saved = state(self.app, "_ai_result")
@@ -530,7 +579,7 @@ class AppLifecycleTests(unittest.TestCase):
             return result
 
         self.generate.side_effect = insufficient
-        self.app.text_area(key="ai_question").set_value(question).run()
+        self.app.text_area(key="ai_question").set_value(question)
         self.app.button(key="generate_answer").click().run()
         self.assert_clean()
         saved = state(self.app, "_ai_result")

@@ -145,6 +145,50 @@ class GeminiTests(unittest.TestCase):
         with self.assertRaises(AttributeError):
             result.model = "changed"
 
+    def test_general_question_uses_a_separate_request_without_dashboard_data(self):
+        question = "Thủ đô của Pháp là gì?"
+        requests = []
+
+        def handler(request):
+            requests.append(request)
+            body = json.loads(request.content)
+            self.assertEqual(body["contents"][0]["parts"][0]["text"], question)
+            self.assertEqual(body["generationConfig"]["responseJsonSchema"], gemini._GENERAL_SCHEMA)
+            self.assertIn("không tuyên bố", body["systemInstruction"]["parts"][0]["text"].casefold())
+            serialized = request.content.decode("utf-8")
+            for private_value in ("snapshot-public", "private-server", "private-order", "private-source"):
+                self.assertNotIn(private_value, serialized)
+            return httpx.Response(200, json=response({"answer": "Thủ đô của Pháp là Paris."}))
+
+        context, _ = self.client(handler)
+        with context:
+            result = gemini.generate_general(KEY, MODEL, question)
+        self.assertEqual(result.payload, {"answer": "Thủ đô của Pháp là Paris."})
+        self.assertEqual((result.attempts, len(requests)), (1, 1))
+        self.sleep.assert_not_called()
+
+    def test_general_question_retries_invalid_shape_and_validates_input(self):
+        requests = []
+
+        def handler(request):
+            requests.append(request)
+            payload = {"unexpected": "x"} if len(requests) == 1 else {"answer": "42"}
+            return httpx.Response(200, json=response(payload))
+
+        context, _ = self.client(handler)
+        with context:
+            result = gemini.generate_general(KEY, MODEL, "6 nhân 7 bằng bao nhiêu?")
+        self.assertEqual(result.payload, {"answer": "42"})
+        self.assertEqual(result.attempts, 2)
+        self.sleep.assert_called_once_with(1.0)
+
+        for question in ("", "   ", "q" * 1001, "Khóa của tôi là " + KEY):
+            with self.subTest(question=question[:20]), \
+                    patch.object(gemini.httpx, "Client") as client, \
+                    self.assertRaises(gemini.GeminiError):
+                gemini.generate_general(KEY, MODEL, question)
+            client.assert_not_called()
+
     def test_question_is_untrusted_data_and_is_limited(self):
         def handler(request):
             body = json.loads(request.content)
@@ -593,6 +637,59 @@ class GeminiContractIntegrationTests(unittest.TestCase):
         self.assertIn("P90 là phân vị thứ 90", validated["answer"][0]["text"])
         self.assertIn("195,00 phút", validated["answer"][0]["text"])
         self.assertIn("không phải SLA", validated["answer"][0]["text"])
+
+    def test_vehicle_typo_is_canonicalized_before_gemini_selects_a_claim(self):
+        from ai.analytics import build_analysis
+        from ai.tests.test_analytics import frame_for
+
+        bundle = build_analysis(frame_for(
+            [100, 110, 130, 140],
+            vehicle_type=["motorcycle", "motorcycle", "scooter", "scooter"],
+        ))
+        question = "phân tích bản ghi phương tiện là motocycle"
+        requests = []
+        real_client = httpx.Client
+
+        def handler(request):
+            requests.append(request)
+            body = json.loads(request.content)
+            content = json.loads(body["contents"][0]["parts"][0]["text"])
+            constraints = content["question_constraints"]
+            self.assertEqual(constraints["mode"], "deterministic")
+            self.assertEqual(constraints["required_status"], "answered")
+            self.assertEqual(len(constraints["allowed_answer_ids"]), 1)
+            answer_id = constraints["allowed_answer_ids"][0]
+            claims = {claim["id"]: claim for claim in content["claims"]}
+            self.assertEqual(claims[answer_id]["groups"], ["motorcycle"])
+            self.assertNotIn("scooter", {
+                group
+                for claim in claims.values()
+                if "answer" in claim["sections"]
+                for group in claim["groups"]
+            })
+            self.assertIn("lỗi chính tả", body["systemInstruction"]["parts"][0]["text"])
+            schema = body["generationConfig"]["responseJsonSchema"]
+            summary_id = schema["properties"]["summary"]["prefixItems"][0]["enum"][0]
+            explanation_id = schema["properties"]["explanations"]["items"]["enum"][0]
+            return httpx.Response(200, json=response({
+                "snapshot_id": content["analysis"]["snapshot_id"],
+                "summary": [summary_id],
+                "explanations": [explanation_id],
+                "answer": [answer_id],
+                "answer_status": "answered",
+            }))
+
+        def factory(**kwargs):
+            return real_client(transport=httpx.MockTransport(handler), **kwargs)
+
+        with patch.object(gemini.httpx, "Client", side_effect=factory), \
+                patch.object(gemini.time, "sleep") as sleeper:
+            result = gemini.generate(KEY, MODEL, bundle, question)
+        self.assertEqual((result.attempts, len(requests)), (1, 1))
+        sleeper.assert_not_called()
+        validated = gemini.validate_response(result.payload, bundle, question)
+        self.assertEqual(validated["answer"][0]["topic"], "vehicle")
+        self.assertIn("motorcycle", validated["answer"][0]["text"])
 
     def test_live_like_schema_selection_succeeds_first_try_and_sends_only_schema_claims(self):
         from ai.analytics import build_analysis
